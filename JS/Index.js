@@ -10810,6 +10810,82 @@ function Finale()
   
 
 function Placements() {
+  // Special handling for double premiere format
+  if(CurrentSeason.premiereformat == "DOUBLEPREMIERE" && CurrentSeason.episodes.length <= 2)
+  {
+    if(organized==0)
+    {
+      Tops.sort((a, b) => a.perfomancescore - b.perfomancescore);
+
+      // Top 2 will lip sync for the win (TOP2 placement)
+      if(TopsQueens.length==0)
+      {
+        TopsQueens.push(Tops[0]);
+        TopsQueens.push(Tops[1]);
+      }
+
+      organized = 1;
+    }
+
+    Main = new Screen();
+    Main.clean();
+
+    if(Tops.length!=0)
+    {
+      if(Steps == 0)
+      {
+        randomtop = getRandomInt(0,Tops.length-1);
+        Main.createImage(Tops[randomtop].image,"#17d4ff");
+        Main.createText(Tops[randomtop].GetName()+". "+CurrentChallenge.TopPlacement());
+      }
+      else
+      {
+        // Reveal TOP2 who will lip sync for the win
+        if(TopsQueens.indexOf(Tops[randomtop]) != -1)
+        {
+          Main.createImage(Tops[randomtop].image,"#1741ff");
+          Main.createText(Tops[randomtop].GetName()+", CONDRAGULATIONS! You are one of the top 2 queens this week.","Bold");
+          Main.createText("You will lip sync for the WIN!","Bold");
+          Tops[randomtop].trackrecord.push("TOP2");
+          Tops[randomtop].ppe += 4;
+          Tops[randomtop].favoritism += 2;
+          Tops[randomtop].highs++;
+          Tops.splice(randomtop,1);
+        }
+        else
+        {
+          // Other tops get HIGH
+          Main.createImage(Tops[randomtop].image,"#17d4ff");
+          Main.createText(Tops[randomtop].GetName()+", great job this week. You are safe.","");
+          Tops[randomtop].trackrecord.push("HIGH");
+          Tops[randomtop].ppe += 4;
+          Tops[randomtop].favoritism += 1;
+          Tops[randomtop].highs++;
+          Tops.splice(randomtop,1);
+        }
+      }
+    }
+
+    Steps++;
+    if(Steps==2)
+      Steps = 0;
+
+    if(Tops.length!=0)
+    {
+      Main.createButton("Proceed", "Placements()");
+    }
+    else
+    {
+      Main.createButton("Proceed", "PremiereLipsync()");
+      Steps = 0;
+      TopsQueens = [];
+      BottomQueens = [];
+      organized = 0;
+    }
+
+    return;
+  }
+
   if(CurrentSeason.lipsyncformat == "LIFE")
   {
     if(organized==0)
@@ -12080,6 +12156,111 @@ function Lipsync() {
   }
 }
 
+function PremiereLipsync() {
+  Main = new Screen();
+  Main.clean();
+
+  switch(Steps){
+    case 0:
+      Main.createBigText("The time has come...");
+      for(let i = 0; i < TopsQueens.length; i++)
+      {
+        Main.createImage(TopsQueens[i].image,"#1741ff");
+      }
+      Main.createText("Two queens stand before me.", 'Bold');
+      Main.createText(TopsQueens[0].GetName()+" and "+TopsQueens[1].GetName()+", you are the top 2 queens of this week." , 'Bold');
+      Main.createText("This is your chance to impress me, and lip sync for the WIN!" , 'Bold');
+      break;
+    case 1:
+      Main.createBigText("The time has come...");
+      for(let i = 0; i < TopsQueens.length; i++)
+      {
+        Main.createImage(TopsQueens[i].image,"#1741ff");
+      }
+      Main.createText("The time has come for you to lipsync...", 'Bold');
+      break;
+    case 2:
+      Main.createBigText("The time has come...");
+      for(let i = 0; i < TopsQueens.length; i++)
+      {
+        Main.createImage(TopsQueens[i].image,"#1741ff");
+      }
+      Main.createText("The time has come for you to lipsync for the WIN!", 'Bold');
+      break;
+    case 3:
+      songschosen = GetSong();
+      Main.createBigText("The time has come...");
+      Main.createText("The lipsync song is "+songschosen+".", 'Bold');
+      for(let i = 0; i < TopsQueens.length; i++)
+      {
+        Main.createImage(TopsQueens[i].image,"#1741ff");
+      }
+      Main.createText("Good luck and don't FUCK IT UP!", 'Bold');
+      break;
+    case 4:
+      Main.createBigText("The time has come...");
+      for(let i = 0; i < TopsQueens.length; i++)
+      {
+        Main.createImage(TopsQueens[i].image,"#1741ff");
+      }
+      Main.createText("Thank you for your performances.", 'Bold');
+      Main.createText("I have made my decision.", 'Bold');
+      break;
+    case 5:
+      Main.createBigText("CONDRAGULATIONS!");
+      for(let i = 0; i < TopsQueens.length; i++)
+      {
+        TopsQueens[i].GetLipsync();
+      }
+      TopsQueens.sort((a, b) => b.lipsyncscore - a.lipsyncscore);
+
+      Main.createImage(TopsQueens[0].image, "#1741ff");
+      Main.createText(TopsQueens[0].GetName()+", CONDRAGULATIONS! You are the winner of this week's challenge.", 'Bold');
+
+      // Update winner's track record from TOP2 to WIN
+      TopsQueens[0].trackrecord[TopsQueens[0].trackrecord.length-1] = "WIN";
+      TopsQueens[0].ppe += 1; // Add 1 more point (already got 4 from TOP2)
+      TopsQueens[0].favoritism += 1; // Add 1 more favoritism
+      TopsQueens[0].wins++;
+      TopsQueens[0].highs--;
+
+      let ls = new LipsyncSong([TopsQueens[0],TopsQueens[1]], songschosen, CurrentSeason.episodes.length, 'top2', [TopsQueens[0]]);
+      CurrentSeason.lipsyncs.push(ls);
+      break;
+    case 6:
+      Main.createBigText("Great job!");
+      Main.createImage(TopsQueens[1].image, "#17d4ff");
+      Main.createText(TopsQueens[1].GetName()+", great job this week. You are safe.", 'Bold');
+      break;
+  }
+
+  Steps++;
+  if(Steps<7)
+    Main.createButton("Proceed", "PremiereLipsync()");
+  else
+  {
+    // After episode 2, combine groups for episode 3
+    if(CurrentSeason.episodes.length == 2)
+    {
+      Main.createText("Next week, all queens will compete together!", 'Bold');
+      // Combine groups
+      firstprem = [];
+      secondprem = [];
+      CurrentSeason.currentCast = [];
+      for(let i = 0; i < CurrentSeason.fullCast.length; i++)
+      {
+        CurrentSeason.currentCast.push(CurrentSeason.fullCast[i]);
+      }
+    }
+
+    Main.createButton("Proceed", "GetPromoTable()");
+    Steps = 0;
+    TopsQueens = [];
+    BottomQueens = [];
+    organized = 0;
+  }
+}
+
 function shuffle(array) {
   let currentIndex = array.length,  randomIndex;
 
@@ -12260,14 +12441,44 @@ function GetPromoTable()
     Main.createBigText("Placements");
     Main.clean();
     Main.createPromoTable();
-    
+
+    // Handle double premiere format - set correct cast for each episode
+    if(CurrentSeason.premiereformat == "DOUBLEPREMIERE")
+    {
+      if(CurrentSeason.episodes.length == 0)
+      {
+        // Episode 1: First group only
+        CurrentSeason.currentCast = [];
+        for (let index = 0; index < firstprem.length; index++) {
+          CurrentSeason.currentCast.push(firstprem[index]);
+        }
+      }
+      else if(CurrentSeason.episodes.length == 1)
+      {
+        // Episode 2: Second group only
+        CurrentSeason.currentCast = [];
+        for (let index = 0; index < secondprem.length; index++) {
+          CurrentSeason.currentCast.push(secondprem[index]);
+        }
+      }
+      else if(CurrentSeason.episodes.length == 2 && premreform == false)
+      {
+        // Episode 3: Combine both groups
+        CurrentSeason.currentCast = [];
+        for (let index = 0; index < CurrentSeason.fullCast.length; index++) {
+          CurrentSeason.currentCast.push(CurrentSeason.fullCast[index]);
+        }
+        premreform = true;
+      }
+    }
+
     if(CurrentSeason.episodes.length == 0)
     {
       Main.createButton("Proceed","Intro()");
     }
     else
     {
-      if(CurrentSeason.premiereformat!="NORMAL")
+      if(CurrentSeason.premiereformat!="NORMAL" && CurrentSeason.premiereformat!="DOUBLEPREMIERE")
       {
         if(CurrentSeason.episodes.length==2 && premreform == false)
         {
@@ -12462,7 +12673,7 @@ function Intro()
   Video.clean();
   Video.createVideo(CurrentSeason.country);
   Video.createBigText("Welcome to "+CurrentSeason.seasonname+'!');
-  Video.createButton("Proceed","ChallengeAnnouncement()");
+  Video.createButton("Proceed","ChallengeSelector()");
 }
 
 function GenerateRusicalRoles(){
@@ -12577,6 +12788,60 @@ function GenerateRusicalRoles(){
       }
       Main.createButton("Proceed","GenerateChallenge()");
 
+}
+
+let selectedChallengeType = null;
+
+function ChallengeSelector(){
+  Main = new Screen();
+  Main.clean();
+  Main.createBigText("Select This Week's Challenge");
+  Main.createRupaulAnnouncement("Queens, it's time to choose your destiny!");
+  Main.createRupaulAnnouncement("Select the challenge type for this week:");
+
+  // Create a select dropdown for challenge types
+  let selectContainer = document.createElement("div");
+  selectContainer.style.textAlign = "center";
+  selectContainer.style.margin = "20px";
+
+  let select = document.createElement("select");
+  select.id = "challengeSelector";
+  select.style.width = "50%";
+  select.style.height = "40px";
+  select.style.fontSize = "16px";
+
+  let challenges = [
+    {value: "Acting", text: "Acting Challenge"},
+    {value: "Ball", text: "Ball Challenge"},
+    {value: "Branding", text: "Branding Challenge"},
+    {value: "Choreography", text: "Dance/Choreography Challenge"},
+    {value: "Comedy", text: "Comedy/Stand-Up Challenge"},
+    {value: "Commercial", text: "Commercial Challenge"},
+    {value: "Design", text: "Design/Sewing Challenge"},
+    {value: "Improv", text: "Improv Challenge"},
+    {value: "Makeover", text: "Makeover Challenge"},
+    {value: "Rusical", text: "Rusical"},
+    {value: "SnatchGame", text: "Snatch Game"},
+    {value: "TalentShow", text: "Talent Show"}
+  ];
+
+  challenges.forEach(function(challenge) {
+    let option = document.createElement("option");
+    option.value = challenge.value;
+    option.text = challenge.text;
+    select.appendChild(option);
+  });
+
+  selectContainer.appendChild(select);
+  document.getElementById("first").appendChild(selectContainer);
+
+  Main.createButton("Proceed", "ConfirmChallengeSelection()");
+}
+
+function ConfirmChallengeSelection(){
+  let select = document.getElementById("challengeSelector");
+  selectedChallengeType = select.value;
+  ChallengeAnnouncement();
 }
 
 function ChallengeAnnouncement(){
@@ -12839,9 +13104,18 @@ function ChallengeAnnouncement(){
       }
       else
       {
-        switch(getRandomInt(0,6))
+        // Use selected challenge type if available, otherwise random
+        let challengeType = selectedChallengeType || getRandomInt(0,6);
+
+        // Reset selected challenge type after use
+        if(selectedChallengeType) {
+          selectedChallengeType = null;
+        }
+
+        switch(typeof challengeType === 'string' ? challengeType : challengeType)
         {
           case 0:
+          case "Design":
             CurrentChallenge = new DesignChallenge();
             CurrentEpisode = new Episode(CurrentChallenge.episodename[CurrentChallenge.chosen], "Design");
             CurrentSeason.episodes.push(CurrentEpisode);
@@ -12849,40 +13123,79 @@ function ChallengeAnnouncement(){
             break;
 
           case 1:
+          case "Acting":
             CurrentChallenge = new ActingChallenge();
             CurrentEpisode = new Episode(CurrentChallenge.plays[CurrentChallenge.chosen], "Acting");
             CurrentSeason.episodes.push(CurrentEpisode);
             CurrentSeason.actingchallenges++;
             break;
           case 2:
+          case "Improv":
             CurrentChallenge = new ImprovChallenge();
             CurrentEpisode = new Episode(CurrentChallenge.episodename, "Improvisation");
             CurrentSeason.episodes.push(CurrentEpisode);
             CurrentSeason.improvchallenges++;
             break;
           case 3:
+          case "Comedy":
             CurrentChallenge = new ComedyChallenge();
             CurrentEpisode = new Episode(CurrentChallenge.episodename, "Comedy");
             CurrentSeason.episodes.push(CurrentEpisode);
             CurrentSeason.standupchallenges++;
             break;
           case 4:
+          case "Choreography":
             CurrentChallenge = new ChoreographyChallenge();
             CurrentEpisode = new Episode(CurrentChallenge.episodename, "Choreography");
             CurrentSeason.episodes.push(CurrentEpisode);
             CurrentSeason.choreochallenges++;
             break;
           case 5:
+          case "Commercial":
             CurrentChallenge = new CommercialChallenge();
             CurrentEpisode = new Episode(CurrentChallenge.episodename, "Commercial");
             CurrentSeason.episodes.push(CurrentEpisode);
             CurrentSeason.commercialchallenges++;
             break;
           case 6:
+          case "Branding":
             CurrentChallenge = new BrandingChallenge();
             CurrentEpisode = new Episode(CurrentChallenge.episodename, "Branding");
             CurrentSeason.episodes.push(CurrentEpisode);
             CurrentSeason.commercialchallenges++;
+            break;
+          case "Ball":
+            CurrentChallenge = new Ball();
+            CurrentEpisode = new Episode(CurrentChallenge.balls[CurrentChallenge.chosen][0], "Ball");
+            CurrentSeason.episodes.push(CurrentEpisode);
+            CurrentSeason.balls++;
+            break;
+          case "Makeover":
+            CurrentChallenge = new Makeover();
+            CurrentEpisode = new Episode(CurrentChallenge.episodename[CurrentChallenge.chosen], "Makeover");
+            CurrentSeason.episodes.push(CurrentEpisode);
+            CurrentSeason.makeoverchallenges++;
+            break;
+          case "SnatchGame":
+            CurrentChallenge = new SnatchGame();
+            CurrentEpisode = new Episode(CurrentChallenge.episodename, "Snatch Game");
+            CurrentSeason.episodes.push(CurrentEpisode);
+            CurrentSeason.snatchgame++;
+            break;
+          case "Rusical":
+            CurrentChallenge = new Rusical();
+            while(CurrentChallenge.castsizes[CurrentChallenge.chosen] != CurrentSeason.currentCast.length)
+            {
+              CurrentChallenge.Reset();
+            }
+            CurrentEpisode = new Episode(CurrentChallenge.regrusical[CurrentChallenge.chosen], "Rusical");
+            CurrentSeason.episodes.push(CurrentEpisode);
+            CurrentSeason.rusicals++;
+            break;
+          case "TalentShow":
+            CurrentChallenge = new TalentShow();
+            CurrentEpisode = new Episode(CurrentChallenge.episodename, "Talent Show");
+            CurrentSeason.episodes.push(CurrentEpisode);
             break;
         }
       }
@@ -12922,6 +13235,34 @@ function RankQueens(){
     Bottoms = [];
     Critiqued = [];
     Safes = [];
+
+    // Special handling for double premiere episodes
+    if(CurrentSeason.premiereformat == "DOUBLEPREMIERE" && CurrentSeason.episodes.length <= 2)
+    {
+      // For double premiere: 4 tops (2 TOP2 + 2 HIGH), rest SAFE, no bottoms
+      for(let i = 0; i < 4; i++)
+      {
+        Tops.push(CurrentSeason.currentCast[i]);
+      }
+
+      // Everyone else is SAFE
+      for(let i = 4; i < CurrentSeason.currentCast.length; i++)
+      {
+        CurrentSeason.currentCast[i].trackrecord.push("SAFE");
+        CurrentSeason.currentCast[i].ppe += 3;
+        CurrentSeason.currentCast[i].safes++;
+        Safes.push(CurrentSeason.currentCast[i]);
+      }
+
+      // All tops are critiqued
+      for(let i = 0; i < Tops.length; i++)
+      {
+        Critiqued.push(Tops[i]);
+      }
+
+      return; // Skip normal ranking logic
+    }
+
     switch(CurrentSeason.lipsyncformat)
     {
       case "LIFE":
@@ -15163,4 +15504,26 @@ function AddRandomCast(){
   }
   UpdateCustomCast();
 }
+//#endregion
+
+//#region Keyboard Navigation
+// Add keyboard navigation for spacebar and right arrow
+document.addEventListener('keydown', function(event) {
+  // Check for spacebar (keyCode 32 or key ' ') or right arrow (keyCode 39 or key 'ArrowRight')
+  if (event.key === ' ' || event.key === 'ArrowRight' || event.keyCode === 32 || event.keyCode === 39) {
+    // Find all proceed buttons
+    let proceedButtons = document.querySelectorAll('button.MainButton');
+
+    // Find the last "Proceed" button (usually the active one)
+    for (let i = proceedButtons.length - 1; i >= 0; i--) {
+      if (proceedButtons[i].innerHTML === 'Proceed') {
+        // Prevent default space behavior (page scroll)
+        event.preventDefault();
+        // Click the button
+        proceedButtons[i].click();
+        break;
+      }
+    }
+  }
+});
 //#endregion
