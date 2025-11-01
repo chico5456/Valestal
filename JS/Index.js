@@ -12793,11 +12793,22 @@ function GenerateRusicalRoles(){
 let selectedChallengeType = null;
 
 function ChallengeSelector(){
-  Main = new Screen();
-  Main.clean();
-  Main.createBigText("Select This Week's Challenge");
-  Main.createRupaulAnnouncement("Queens, it's time to choose your destiny!");
-  Main.createRupaulAnnouncement("Select the challenge type for this week:");
+  switch(localStorage.getItem("theme"))
+  {
+    case "Simple.css":
+      document.body.style.backgroundColor = '#1a1a1a';
+      break;
+
+    default:
+      document.body.style.backgroundImage = 'url("Images/Backgrounds/RChallenge.png")';
+      break;
+  }
+
+  Announcement = new Screen();
+  Announcement.clean();
+  Announcement.createBigText("Select This Week's Challenge");
+  Announcement.createRupaulAnnouncement("Queens, it's time to choose your destiny!");
+  Announcement.createRupaulAnnouncement("Select the challenge type for this week:");
 
   // Create a select dropdown for challenge types
   let selectContainer = document.createElement("div");
@@ -12833,9 +12844,9 @@ function ChallengeSelector(){
   });
 
   selectContainer.appendChild(select);
-  Main.MainScreen.appendChild(selectContainer);
+  Announcement.MainScreen.appendChild(selectContainer);
 
-  Main.createButton("Proceed", "ConfirmChallengeSelection()");
+  Announcement.createButton("Proceed", "ConfirmChallengeSelection()");
 }
 
 function ConfirmChallengeSelection(){
