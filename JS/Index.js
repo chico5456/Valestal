@@ -11076,55 +11076,111 @@ function Placements() {
 
     if(Tops.length!=0)
     {
+       // Always pick a new random top for display
+
+      randomtop = getRandomInt(0,Tops.length-1);
+
+ 
+
       if(Steps == 0)
+
       {
-        randomtop = getRandomInt(0,Tops.length-1);
+
         Main.createImage(Tops[randomtop].image,"#17d4ff");
+
         Main.createText(Tops[randomtop].GetName()+". "+CurrentChallenge.TopPlacement());
+
       }
+
       else
+
       {
+
         // Reveal TOP2 who will lip sync for the win
+
         if(TopsQueens.indexOf(Tops[randomtop]) != -1)
+
         {
+
           Main.createImage(Tops[randomtop].image,"#1741ff");
+
           Main.createText(Tops[randomtop].GetName()+", CONDRAGULATIONS! You are one of the top 2 queens this week.","Bold");
+
           Main.createText("You will lip sync for the WIN!","Bold");
+
           Tops[randomtop].trackrecord.push("TOP2");
+
           Tops[randomtop].ppe += 4;
+
           Tops[randomtop].favoritism += 2;
+
           Tops[randomtop].highs++;
+
           Tops.splice(randomtop,1);
+
         }
+
         else
+
         {
+
           // Other tops get HIGH
+
           Main.createImage(Tops[randomtop].image,"#17d4ff");
+
           Main.createText(Tops[randomtop].GetName()+", great job this week. You are safe.","");
+
           Tops[randomtop].trackrecord.push("HIGH");
+
           Tops[randomtop].ppe += 4;
+
           Tops[randomtop].favoritism += 1;
+
           Tops[randomtop].highs++;
+
           Tops.splice(randomtop,1);
+
         }
+
       }
+
     }
+
+ 
 
     Steps++;
+
     if(Steps==2)
+
       Steps = 0;
 
+ 
+
     if(Tops.length!=0)
+
     {
+
       Main.createButton("Proceed", "Placements()");
+
     }
+
     else
+
     {
+
+      // Ensure TopsQueens has exactly 2 queens before calling PremiereLipsync
+
+      if(TopsQueens.length < 2) {
+
+        console.error("Error: TopsQueens should have 2 queens but has " + TopsQueens.length);
+
+      }
+
+ 
+
       Main.createButton("Proceed", "PremiereLipsync()");
+
       Steps = 0;
-      // Don't reset TopsQueens here - we need it for PremiereLipsync!
-      // TopsQueens = [];
-      // BottomQueens = [];
       organized = 0;
     }
 
@@ -16041,3 +16097,4 @@ document.addEventListener('keydown', function(event) {
   }
 });
 //#endregion
+
