@@ -1422,6 +1422,15 @@ class Screen {
       treps.append(thep);
     }
 
+    const premiereFormat = CurrentSeason.premiereformat;
+    const doublePremiereFormats = ["DOUBLEPREMIERE", "S6", "S12"];
+
+    console.debug("[TrackRecords] Rendering", {
+      episodeCount: CurrentSeason.episodes.length,
+      premiereFormat,
+      doublePremiereFormats
+    });
+
     for(let q = 0; q < CurrentSeason.currentCast.length; q++)
     {
       let track = document.createElement("tr");
@@ -1457,7 +1466,8 @@ class Screen {
 
       track.append(td);
 
-      const isDoublePremiereSecondGroup = CurrentSeason.premiereformat === "DOUBLEPREMIERE" && queen.premieregroup === 1;
+      const queenPremiereGroup = typeof queen.premieregroup === "string" ? parseInt(queen.premieregroup, 10) : queen.premieregroup;
+      const isDoublePremiereSecondGroup = doublePremiereFormats.includes(premiereFormat) && queenPremiereGroup === 1;
       const hasLeadingPlaceholder = queen.trackrecord[0] === "";
       const applyDoublePremiereOffset = isDoublePremiereSecondGroup && !hasLeadingPlaceholder;
 
@@ -1465,8 +1475,17 @@ class Screen {
       {
         console.debug("[TrackRecords] Applying double premiere offset", {
           queen: queen.GetName(),
-          premiereGroup: queen.premieregroup,
+          premiereGroup: queenPremiereGroup,
           episodes: episodesCount,
+          trackRecord: queen.trackrecord.slice()
+        });
+      }
+      else if(isDoublePremiereSecondGroup)
+      {
+        console.debug("[TrackRecords] Double premiere queen without offset", {
+          queen: queen.GetName(),
+          premiereGroup: queenPremiereGroup,
+          hasLeadingPlaceholder,
           trackRecord: queen.trackrecord.slice()
         });
       }
@@ -1474,6 +1493,7 @@ class Screen {
       for(let episodeIndex = 0; episodeIndex < episodesCount; episodeIndex++)
       {
         let placement;
+        let placementSourceIndex = episodeIndex;
 
         if(applyDoublePremiereOffset)
         {
@@ -1483,12 +1503,25 @@ class Screen {
           }
           else
           {
-            placement = queen.trackrecord[episodeIndex - 1];
+            placementSourceIndex = episodeIndex - 1;
           }
         }
-        else
+
+        if(placement === undefined)
         {
-          placement = queen.trackrecord[episodeIndex];
+          if(placementSourceIndex >= 0 && placementSourceIndex < queen.trackrecord.length)
+          {
+            placement = queen.trackrecord[placementSourceIndex];
+          }
+          else
+          {
+            console.debug("[TrackRecords] Placement lookup out of range", {
+              queen: queen.GetName(),
+              episodeIndex,
+              placementSourceIndex,
+              trackLength: queen.trackrecord.length
+            });
+          }
         }
         let trtr = document.createElement("td");
 
