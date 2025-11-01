@@ -9281,25 +9281,6 @@ let DragRaceQueens = [
 //#region Commands
 
 function ProducersRoom() {
-  // Set up TopsQueens and BottomQueens if not already set
-  if(TopsQueens.length == 0 && Tops.length > 0) {
-    TopsQueens.push(Tops[0]);
-    if(Tops.length > 1) {
-      TopsQueens.push(Tops[1]);
-      // Check for double win
-      if(TopsQueens[0].perfomancescore < 5 && TopsQueens[1].perfomancescore < 5) {
-        doublewin = true;
-      }
-    }
-  }
-
-  if(BottomQueens.length == 0 && Bottoms.length > 0) {
-    BottomQueens.push(Bottoms[0]);
-    if(Bottoms.length > 1) {
-      BottomQueens.push(Bottoms[1]);
-    }
-  }
-
   let Main = new Screen();
   Main.clean();
   Main.createBigText("🎬 PRODUCERS ROOM 🎬");
@@ -9360,55 +9341,95 @@ function ProducersRoom() {
     return chip;
   };
 
-  // Determine default placements before any rigging happens
+  const predictedPlacements = new Map();
+
+  const assignPlacement = (queen, placement) => {
+    if(!queen) {
+      return;
+    }
+    predictedPlacements.set(queen, placement);
+  };
+
+  const buildAdjustedTopOrder = () => {
+    let ordered = Tops.map(queen => {
+      let lastPlacement = queen.trackrecord[queen.trackrecord.length-1];
+      let adjustment = 0;
+      if(lastPlacement == "WIN" || lastPlacement == "DOUBLEWIN") {
+        adjustment += 15;
+      }
+      else if(lastPlacement == "BOTTOM") {
+        adjustment -= 15;
+      }
+      return { queen: queen, adjusted: queen.finalscore + adjustment };
+    });
+    ordered.sort((a, b) => a.adjusted - b.adjusted);
+    return ordered.map(entry => entry.queen);
+  };
+
+  const calculateDefaultPlacements = () => {
+    Safes.forEach(queen => assignPlacement(queen, "SAFE"));
+
+    if(CurrentSeason.premiereformat == "DOUBLEPREMIERE" && CurrentSeason.episodes.length <= 2) {
+      let orderedTops = Tops.slice().sort((a, b) => a.perfomancescore - b.perfomancescore);
+      orderedTops.slice(0,2).forEach(queen => assignPlacement(queen, "TOP2"));
+      orderedTops.slice(2).forEach(queen => assignPlacement(queen, "HIGH"));
+    }
+    else if(CurrentSeason.lipsyncformat == "AS7") {
+      let orderedTops = Tops.slice().sort((a, b) => a.finalscore - b.finalscore);
+      assignPlacement(orderedTops[0], "WIN");
+      assignPlacement(orderedTops[1], "TOP2");
+      orderedTops.slice(2).forEach(queen => assignPlacement(queen, "HIGH"));
+    }
+    else {
+      let orderedTops = buildAdjustedTopOrder();
+      let potentialWinners = orderedTops.slice(0, Math.min(2, orderedTops.length));
+      let isDoubleWin = potentialWinners.length == 2 && potentialWinners[0].perfomancescore < 5 && potentialWinners[1].perfomancescore < 5;
+
+      if(potentialWinners.length > 0) {
+        assignPlacement(potentialWinners[0], isDoubleWin ? "DOUBLEWIN" : "WIN");
+      }
+      if(potentialWinners.length > 1) {
+        assignPlacement(potentialWinners[1], isDoubleWin ? "DOUBLEWIN" : "HIGH");
+      }
+
+      orderedTops.slice(isDoubleWin ? 2 : 1).forEach(queen => {
+        if(!predictedPlacements.has(queen)) {
+          assignPlacement(queen, "HIGH");
+        }
+      });
+    }
+
+    Tops.forEach(queen => {
+      if(!predictedPlacements.has(queen)) {
+        assignPlacement(queen, "HIGH");
+      }
+    });
+
+    if(!(CurrentSeason.premiereformat == "DOUBLEPREMIERE" && CurrentSeason.episodes.length <= 2)) {
+      let useThreeWay = Bottoms.length >= 3 && Bottoms[0] && Bottoms[1] && Bottoms[2] &&
+        Bottoms[0].perfomancescore > 40 && Bottoms[1].perfomancescore > 40 && Bottoms[2].perfomancescore > 40 &&
+        CurrentSeason.currentCast.length >= 6;
+
+      let lipSyncers = useThreeWay ? Bottoms.slice(0,3) : Bottoms.slice(0, Math.min(2, Bottoms.length));
+      lipSyncers.forEach(queen => assignPlacement(queen, "BOTTOM"));
+      Bottoms.slice(lipSyncers.length).forEach(queen => {
+        if(!predictedPlacements.has(queen)) {
+          assignPlacement(queen, "LOW");
+        }
+      });
+    }
+
+    CurrentSeason.currentCast.forEach(queen => {
+      if(!predictedPlacements.has(queen)) {
+        assignPlacement(queen, "SAFE");
+      }
+    });
+  };
+
+  calculateDefaultPlacements();
+
   let getCurrentPlacement = (queen) => {
-    let winners = [];
-    if (TopsQueens.length > 0) {
-      winners = TopsQueens.slice();
-    } else if (Tops.length > 0) {
-      winners.push(Tops[0]);
-      if (doublewin && Tops.length > 1) {
-        winners.push(Tops[1]);
-      }
-    }
-
-    if (!doublewin && winners.length === 1 && Tops.length > 1) {
-      if (Tops[0] && Tops[1] && Tops[0].perfomancescore === Tops[1].perfomancescore && Tops[0].perfomancescore < 5) {
-        winners.push(Tops[1]);
-      }
-    }
-
-    let lipSyncers = [];
-    if (BottomQueens.length > 0) {
-      lipSyncers = BottomQueens.slice();
-    } else if (Bottoms.length > 0) {
-      lipSyncers.push(Bottoms[0]);
-      if (Bottoms.length > 1) {
-        lipSyncers.push(Bottoms[1]);
-      }
-    }
-
-    let hasDoubleWin = doublewin || winners.length > 1;
-
-    if (winners.indexOf(queen) !== -1) {
-      if (CurrentSeason.lipsyncformat === "AS7") {
-        return "TOP2";
-      }
-      if (hasDoubleWin) {
-        return "DOUBLEWIN";
-      }
-      return "WIN";
-    }
-    if (Tops.indexOf(queen) !== -1) {
-      return "HIGH";
-    }
-    if (lipSyncers.indexOf(queen) !== -1) {
-      return "BOTTOM";
-    }
-    if (Bottoms.indexOf(queen) !== -1) {
-      return "LOW";
-    }
-    return "SAFE";
+    return predictedPlacements.get(queen) || "SAFE";
   };
 
   CurrentSeason.currentCast.forEach((queen, index) => {
@@ -11151,10 +11172,9 @@ function Placements() {
       Tops.sort((a, b) => a.perfomancescore - b.perfomancescore);
 
       // Top 2 will lip sync for the win (TOP2 placement)
-      if(TopsQueens.length==0)
+      if(TopsQueens.length < 2)
       {
-        TopsQueens.push(Tops[0]);
-        TopsQueens.push(Tops[1]);
+        TopsQueens = Tops.slice(0, 2);
       }
 
       organized = 1;
@@ -12503,7 +12523,15 @@ function Lipsync() {
         }
         break;
         }
-    Steps++;
+    let waitingForProducerChoice = (Steps == 6);
+    if(!waitingForProducerChoice)
+    {
+      Steps++;
+    }
+    if(waitingForProducerChoice)
+    {
+      return;
+    }
     if(Steps<8)
       Main.createButton("Proceed", "Lipsync()");
     else
