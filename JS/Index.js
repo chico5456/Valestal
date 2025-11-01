@@ -1426,12 +1426,23 @@ class Screen {
     {
       let track = document.createElement("tr");
 
+      let queen = CurrentSeason.currentCast[q];
+      let episodesCount = CurrentSeason.episodes.length;
+
+      if(queen.trackrecord.length !== episodesCount)
+      {
+        console.debug("[TrackRecords] Placement mismatch", {
+          queen: queen.GetName(),
+          episodes: episodesCount,
+          trackRecord: queen.trackrecord.slice()
+        });
+      }
+
       let qname = document.createElement("td");
 
-      qname.innerHTML = CurrentSeason.currentCast[q].GetName();
-
+      qname.innerHTML = queen.GetName();
       if(CurrentSeason.animals == true){
-        qname.innerHTML += "<br><small>("+CurrentSeason.currentCast[q].animal.name+")</small>";
+        qname.innerHTML += "<br><small>("+queen.animal.name+")</small>";
       }
 
       qname.setAttribute("class","trq");
@@ -1442,118 +1453,195 @@ class Screen {
 
       let td = document.createElement("td");
 
-      td.setAttribute("style", "background: url("+ CurrentSeason.currentCast[q].image +"); background-size: 102px 102px; background-position: center;");
+      td.setAttribute("style", "background: url("+ queen.image +"); background-size: 102px 102px; background-position: center;");
 
       track.append(td);
 
-      for(let t = 0; t < CurrentSeason.currentCast[q].trackrecord.length; t++)
+      for(let episodeIndex = 0; episodeIndex < episodesCount; episodeIndex++)
       {
+        let placement = queen.trackrecord[episodeIndex];
         let trtr = document.createElement("td");
 
-        trtr.innerHTML = CurrentSeason.currentCast[q].trackrecord[t];
-
-        switch(CurrentSeason.currentCast[q].trackrecord[t])
+        if(placement === undefined || placement === '')
         {
-          case "L3RD":
-            trtr.innerHTML = "LOST <br> 3RD ROUND";
-            trtr.setAttribute("style","background: #FFD100; font-weight: bold;");
-            break;
-          
-          case "L2RD":
-            trtr.innerHTML = "LOST <br> 2ND ROUND";
-            trtr.setAttribute("style","background: #FFAE00; font-weight: bold;");
-            break;
-          
-          case "L1RD":
-            trtr.innerHTML = "LOST <br> 1ST ROUND";
-            trtr.setAttribute("style","background: #FF7C00; font-weight: bold;");
-            break;
+          if(placement === undefined)
+          {
+            console.debug("[TrackRecords] Missing placement", {
+              queen: queen.GetName(),
+              episode: episodeIndex + 1,
+              episodes: episodesCount,
+              trackRecord: queen.trackrecord.slice()
+            });
+          }
 
-          case "ELIM ":
-            trtr.innerHTML = "ELIMINATED";
-            trtr.setAttribute("style","background: sienna; font-weight: bold;");
-            break;
+          trtr.innerHTML = "—";
+          trtr.setAttribute("style","background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #ececec 10px, #ececec 20px); color: #555; font-style: italic;");
+        }
+        else
+        {
+          trtr.innerHTML = placement;
 
-          case "GUEST":
-            trtr.setAttribute("style","background: gainsboro; font-weight: bold;");
-            break;
+          switch(placement)
+          {
+            case "L3RD":
+              trtr.innerHTML = "LOST <br> 3RD ROUND";
+              trtr.setAttribute("style","background: #FFD100; font-weight: bold;");
+              break;
 
-          case "WINNER":
-            trtr.setAttribute("style","background: yellow; font-weight: bold;");
-            break;
-            
-          case "RUNNER UP":
-            trtr.setAttribute("style","background: silver; font-weight: bold;");
-            break;
+            case "L2RD":
+              trtr.innerHTML = "LOST <br> 2ND ROUND";
+              trtr.setAttribute("style","background: #FFAE00; font-weight: bold;");
+              break;
 
-          case "TOP 2":
-            trtr.setAttribute("style","background: lightgreen; font-weight: bold;");
-            break;
+            case "L1RD":
+              trtr.innerHTML = "LOST <br> 1ST ROUND";
+              trtr.setAttribute("style","background: #FF7C00; font-weight: bold;");
+              break;
 
-          case "TOP2":
-            trtr.innerHTML = "WIN";
-            trtr.setAttribute("style","background: deepskyblue; font-weight: bold;");
-            break;
+            case "ELIM ":
+              trtr.innerHTML = "ELIMINATED";
+              trtr.setAttribute("style","background: sienna; font-weight: bold;");
+              break;
 
-          case "TOP 3":
-            
-            trtr.setAttribute("style","background: lightgreen; font-weight: bold;");
-            break;
+            case "GUEST":
+              trtr.setAttribute("style","background: gainsboro; font-weight: bold;");
+              break;
 
-          case "TOP 4":
-            trtr.setAttribute("style","background: lightgreen; font-weight: bold;");
-            break;
+            case "WINNER":
+              trtr.setAttribute("style","background: yellow; font-weight: bold;");
+              break;
 
-          case "WIN":
-            trtr.setAttribute("style","background: royalblue; font-weight: bold; color: white;");
-            break;
-          
-          case "HIGH":
-            trtr.setAttribute("style","background: lightblue");
-            break;
-          
-          case "HIGH+BLOCK":
-            trtr.innerHTML = "HIGH <br> + <br> <b>BLOCK</b>";
-            trtr.setAttribute("style","background: #D66D73");
-            break;
+            case "RUNNER UP":
+              trtr.setAttribute("style","background: silver; font-weight: bold;");
+              break;
 
-          case "BLOCK":
-            trtr.innerHTML = "<b>BLOCK</b>";
-            trtr.setAttribute("style","background: red");
-            break;
-          
-          case "SAFE":
-            trtr.setAttribute("style","background: #F5EBF5;");
-            break;
+            case "TOP 2":
+              trtr.setAttribute("style","background: lightgreen; font-weight: bold;");
+              break;
 
-          case "LOW":
-            trtr.setAttribute("style","background: lightpink");
-            break;
+            case "TOP2":
+              trtr.innerHTML = "WIN";
+              trtr.setAttribute("style","background: deepskyblue; font-weight: bold;");
+              break;
 
-          case "BOTTOM":
-            trtr.setAttribute("style","background: tomato");
-            break;
+            case "TOP 3":
+              trtr.setAttribute("style","background: lightgreen; font-weight: bold;");
+              break;
 
-          case "ELIMINATED":
-            trtr.setAttribute("style","background: red; font-weight: bold;");
-            break;
-          
-          case "DOUBLEWIN":
-            trtr.innerHTML = "WIN";
-            trtr.setAttribute("style","background: darkblue; font-weight: bold; color: white;");
-            break;
+            case "TOP 4":
+              trtr.setAttribute("style","background: lightgreen; font-weight: bold;");
+              break;
 
-          default:
-            trtr.setAttribute("style","background: #A9A9A9");
-            break;
+            case "WIN":
+              trtr.setAttribute("style","background: royalblue; font-weight: bold; color: white;");
+              break;
+
+            case "HIGH":
+              trtr.setAttribute("style","background: lightblue");
+              break;
+
+            case "HIGH+BLOCK":
+              trtr.innerHTML = "HIGH <br> + <br> <b>BLOCK</b>";
+              trtr.setAttribute("style","background: #D66D73");
+              break;
+
+            case "BLOCK":
+              trtr.innerHTML = "<b>BLOCK</b>";
+              trtr.setAttribute("style","background: red;");
+              break;
+
+            case "SAFE":
+              trtr.setAttribute("style","background: #F5EBF5;");
+              break;
+
+            case "LOW":
+              trtr.setAttribute("style","background: lightpink");
+              break;
+
+            case "BOTTOM":
+              trtr.setAttribute("style","background: tomato");
+              break;
+
+            case "ELIMINATED":
+              trtr.setAttribute("style","background: red; font-weight: bold;");
+              break;
+
+            case "DOUBLEWIN":
+              trtr.innerHTML = "WIN";
+              trtr.setAttribute("style","background: darkblue; font-weight: bold; color: white;");
+              break;
+
+            case "BTM2 ":
+              trtr.innerHTML = "BTM 2";
+              trtr.setAttribute("style","background: crimson; font-weight: bold; color: white;");
+              break;
+
+            case "BTM3 ":
+              trtr.innerHTML = "BTM 3";
+              trtr.setAttribute("style","background: crimson; font-weight: bold; color: white;");
+              break;
+
+            case "BTM4":
+              trtr.innerHTML = "BTM4";
+              trtr.setAttribute("style","background: crimson; font-weight: bold; color: white;");
+              break;
+
+            case "BTM5":
+              trtr.innerHTML = "BTM5";
+              trtr.setAttribute("style","background: crimson; font-weight: bold; color: white;");
+              break;
+
+            case "MISS CONGENIALITY":
+              trtr.setAttribute("style","background: aqua; color: font-weight: bold;");
+              break;
+
+            case "SAVED":
+              trtr.innerHTML = "SAVED";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            case "SAVED+CHOC":
+              trtr.innerHTML = "SAVED <br> + <br> CHOCOLATE";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            case "SAVED+VOTE":
+              trtr.innerHTML = "SAVED <br> + <br> VOTE";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            case "SAVED+RTRN":
+              trtr.innerHTML = "SAVED <br> + <br> RETURNED";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            case "SAVED+RTRN+CHOC":
+              trtr.innerHTML = "SAVED <br> + <br> RETURNED <br> + <br> CHOCOLATE";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            case "SAVED+RTRN+VOTE":
+              trtr.innerHTML = "SAVED <br> + <br> RETURNED <br> + <br> VOTE";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            case "SAVED+RTRN+CHOC+VOTE":
+              trtr.innerHTML = "SAVED <br> + <br> RETURNED <br> + <br> CHOCOLATE <br> + <br> VOTE";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            default:
+              trtr.setAttribute("style","background: #A9A9A9");
+              break;
+          }
         }
 
-        if(CurrentSeason.currentCast[q].miniwon.indexOf(t+1)!=-1)
+        if(queen.miniwon.indexOf(episodeIndex+1)!=-1)
         {
           trtr.innerHTML += "<br><small><i> Mini-Challenge Winner </i></small>";
         }
 
-        if(CurrentSeason.currentCast[q].immune.indexOf(t+1)!=-1)
+        if(queen.immune.indexOf(episodeIndex+1)!=-1)
         {
           trtr.setAttribute("style","background: magenta");
         }
@@ -1586,7 +1674,6 @@ class Screen {
 
       tbody.append(track);
     }
-
     for(let q = 0; q < CurrentSeason.eliminatedCast.length; q++)
     {
       let track = document.createElement("tr");
