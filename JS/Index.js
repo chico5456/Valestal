@@ -1425,7 +1425,80 @@ class Screen {
     const premiereFormat = CurrentSeason.premiereformat;
     const doublePremiereFormats = ["DOUBLEPREMIERE", "S6", "S12"];
 
-    console.debug("[TrackRecords] Rendering", {
+    const normaliseTrackRecord = (queen, episodesCount) => {
+      const placements = new Array(episodesCount).fill("");
+      const baseTrack = queen.trackrecord.slice();
+      const queenPremiereGroup = typeof queen.premieregroup === "string" ? parseInt(queen.premieregroup, 10) : queen.premieregroup;
+      const isDoublePremiereQueen = doublePremiereFormats.includes(premiereFormat) && queenPremiereGroup === 1;
+      let offset = 0;
+
+      if(isDoublePremiereQueen)
+      {
+        if(baseTrack.length === episodesCount - 1)
+        {
+          offset = 1;
+          console.log("[TrackRecords] Derived double-premiere offset", {
+            queen: queen.GetName(),
+            baseTrack,
+            episodesCount
+          });
+        }
+        else if(baseTrack.length === episodesCount)
+        {
+          console.log("[TrackRecords] Double-premiere data already aligned", {
+            queen: queen.GetName(),
+            baseTrack,
+            episodesCount
+          });
+        }
+        else
+        {
+          console.log("[TrackRecords] Unexpected double-premiere track length", {
+            queen: queen.GetName(),
+            baseTrack,
+            episodesCount
+          });
+        }
+      }
+      else if(baseTrack.length !== episodesCount)
+      {
+        console.log("[TrackRecords] Placement mismatch", {
+          queen: queen.GetName(),
+          baseTrack,
+          episodesCount
+        });
+      }
+
+      for(let i = 0; i < baseTrack.length; i++)
+      {
+        const targetIndex = i + offset;
+        if(targetIndex < placements.length)
+        {
+          placements[targetIndex] = baseTrack[i];
+        }
+        else
+        {
+          console.log("[TrackRecords] Placement overflow", {
+            queen: queen.GetName(),
+            baseTrack,
+            targetIndex,
+            episodesCount
+          });
+        }
+      }
+
+      console.log("[TrackRecords] Normalised row", {
+        queen: queen.GetName(),
+        placements,
+        baseTrack,
+        offset,
+        episodesCount
+      });
+
+      return placements;
+    };
+
+    console.log("[TrackRecords] Rendering", {
       episodeCount: CurrentSeason.episodes.length,
       premiereFormat,
       doublePremiereFormats
@@ -1437,15 +1510,7 @@ class Screen {
 
       let queen = CurrentSeason.currentCast[q];
       let episodesCount = CurrentSeason.episodes.length;
-
-      if(queen.trackrecord.length !== episodesCount)
-      {
-        console.debug("[TrackRecords] Placement mismatch", {
-          queen: queen.GetName(),
-          episodes: episodesCount,
-          trackRecord: queen.trackrecord.slice()
-        });
-      }
+      const placements = normaliseTrackRecord(queen, episodesCount);
 
       let qname = document.createElement("td");
 
@@ -1466,79 +1531,21 @@ class Screen {
 
       track.append(td);
 
-      const queenPremiereGroup = typeof queen.premieregroup === "string" ? parseInt(queen.premieregroup, 10) : queen.premieregroup;
-      const isDoublePremiereSecondGroup = doublePremiereFormats.includes(premiereFormat) && queenPremiereGroup === 1;
-      const hasLeadingPlaceholder = queen.trackrecord[0] === "";
-      const applyDoublePremiereOffset = isDoublePremiereSecondGroup && !hasLeadingPlaceholder;
-
-      if(applyDoublePremiereOffset)
-      {
-        console.debug("[TrackRecords] Applying double premiere offset", {
-          queen: queen.GetName(),
-          premiereGroup: queenPremiereGroup,
-          episodes: episodesCount,
-          trackRecord: queen.trackrecord.slice()
-        });
-      }
-      else if(isDoublePremiereSecondGroup)
-      {
-        console.debug("[TrackRecords] Double premiere queen without offset", {
-          queen: queen.GetName(),
-          premiereGroup: queenPremiereGroup,
-          hasLeadingPlaceholder,
-          trackRecord: queen.trackrecord.slice()
-        });
-      }
-
       for(let episodeIndex = 0; episodeIndex < episodesCount; episodeIndex++)
       {
-        let placement;
-        let placementSourceIndex = episodeIndex;
-
-        if(applyDoublePremiereOffset)
-        {
-          if(episodeIndex === 0)
-          {
-            placement = "";
-          }
-          else
-          {
-            placementSourceIndex = episodeIndex - 1;
-          }
-        }
-
-        if(placement === undefined)
-        {
-          if(placementSourceIndex >= 0 && placementSourceIndex < queen.trackrecord.length)
-          {
-            placement = queen.trackrecord[placementSourceIndex];
-          }
-          else
-          {
-            console.debug("[TrackRecords] Placement lookup out of range", {
-              queen: queen.GetName(),
-              episodeIndex,
-              placementSourceIndex,
-              trackLength: queen.trackrecord.length
-            });
-          }
-        }
+        const placement = placements[episodeIndex];
         let trtr = document.createElement("td");
 
         if(placement === undefined || placement === '')
         {
-          if(placement === undefined)
-          {
-            console.debug("[TrackRecords] Missing placement", {
-              queen: queen.GetName(),
-              episode: episodeIndex + 1,
-              episodes: episodesCount,
-              trackRecord: queen.trackrecord.slice()
-            });
-          }
-
           trtr.innerHTML = "—";
           trtr.setAttribute("style","background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #ececec 10px, #ececec 20px); color: #555; font-style: italic;");
+          console.log("[TrackRecords] Blank placement cell", {
+            queen: queen.GetName(),
+            episode: episodeIndex + 1,
+            episodesCount,
+            placements
+          });
         }
         else
         {
