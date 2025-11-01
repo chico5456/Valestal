@@ -12833,7 +12833,7 @@ function ChallengeSelector(){
   });
 
   selectContainer.appendChild(select);
-  document.getElementById("first").appendChild(selectContainer);
+  Main.MainScreen.appendChild(selectContainer);
 
   Main.createButton("Proceed", "ConfirmChallengeSelection()");
 }
