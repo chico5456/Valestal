@@ -12900,7 +12900,9 @@ function PremiereLipsync() {
 
   Steps++;
   if(Steps<7)
+  {
     Main.createButton("Proceed", "PremiereLipsync()");
+  }
   else
   {
     // After episode 2, combine groups for episode 3
@@ -12919,12 +12921,12 @@ function PremiereLipsync() {
 
     Main.createButton("Proceed", "GetPromoTable()");
     Steps = 0;
-  }
 
-  // Reset after PremiereLipsync is done
-  TopsQueens = [];
-  BottomQueens = [];
-  organized = 0;
+    // Reset after PremiereLipsync is done
+    TopsQueens = [];
+    BottomQueens = [];
+    organized = 0;
+  }
 }
 
 function shuffle(array) {
