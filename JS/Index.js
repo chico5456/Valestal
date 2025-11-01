@@ -9281,6 +9281,25 @@ let DragRaceQueens = [
 //#region Commands
 
 function ProducersRoom() {
+  // Set up TopsQueens and BottomQueens if not already set
+  if(TopsQueens.length == 0 && Tops.length > 0) {
+    TopsQueens.push(Tops[0]);
+    if(Tops.length > 1) {
+      TopsQueens.push(Tops[1]);
+      // Check for double win
+      if(TopsQueens[0].perfomancescore < 5 && TopsQueens[1].perfomancescore < 5) {
+        doublewin = true;
+      }
+    }
+  }
+
+  if(BottomQueens.length == 0 && Bottoms.length > 0) {
+    BottomQueens.push(Bottoms[0]);
+    if(Bottoms.length > 1) {
+      BottomQueens.push(Bottoms[1]);
+    }
+  }
+
   let Main = new Screen();
   Main.clean();
   Main.createBigText("🎬 PRODUCERS ROOM 🎬");
@@ -9319,7 +9338,7 @@ function ProducersRoom() {
       if (TopsQueens[0] === queen || (TopsQueens[1] === queen && doublewin)) {
         return doublewin ? "DOUBLEWIN" : "WIN";
       }
-      return "TOP2";
+      return "HIGH";  // Changed from TOP2 to HIGH
     }
     if (Tops.indexOf(queen) !== -1) return "HIGH";
     if (BottomQueens.indexOf(queen) !== -1) return "BOTTOM";
@@ -11103,8 +11122,9 @@ function Placements() {
     {
       Main.createButton("Proceed", "PremiereLipsync()");
       Steps = 0;
-      TopsQueens = [];
-      BottomQueens = [];
+      // Don't reset TopsQueens here - we need it for PremiereLipsync!
+      // TopsQueens = [];
+      // BottomQueens = [];
       organized = 0;
     }
 
@@ -12734,10 +12754,12 @@ function PremiereLipsync() {
 
     Main.createButton("Proceed", "GetPromoTable()");
     Steps = 0;
-    TopsQueens = [];
-    BottomQueens = [];
-    organized = 0;
   }
+
+  // Reset after PremiereLipsync is done
+  TopsQueens = [];
+  BottomQueens = [];
+  organized = 0;
 }
 
 function shuffle(array) {
@@ -13758,12 +13780,13 @@ function RankQueens(){
       case "LIFE":
       if(CurrentSeason.currentCast.length>=14)
       {
-        for(let i = 0; i<getRandomInt(3,5); i++)
+        // Fixed placement distribution: 3 tops (1 WIN + 2 HIGH), 3 bottoms (1 LOW + 2 BTM2), rest SAFE
+        for(let i = 0; i<3; i++)
           {
             Tops.push(CurrentSeason.currentCast[i]);
           }
 
-          for(let i = 0; i<getRandomInt(3,5); i++)
+          for(let i = 0; i<3; i++)
           {
             Bottoms.push(CurrentSeason.currentCast[CurrentSeason.currentCast.length-1-i]);
           }
@@ -13849,12 +13872,13 @@ function RankQueens(){
         }
         else
         {
-          for(let i = 0; i<getRandomInt(3,4); i++)
+          // Fixed placement distribution: 3 tops (1 WIN + 2 HIGH), 3 bottoms (1 LOW + 2 BTM2), rest SAFE
+          for(let i = 0; i<3; i++)
           {
             Tops.push(CurrentSeason.currentCast[i]);
           }
 
-          for(let i = 0; i<getRandomInt(3,4); i++)
+          for(let i = 0; i<3; i++)
           {
               Bottoms.push(CurrentSeason.currentCast[CurrentSeason.currentCast.length-1-i]);
           }
