@@ -9280,6 +9280,231 @@ let DragRaceQueens = [
 
 //#region Commands
 
+function ProducersRoom() {
+  let Main = new Screen();
+  Main.clean();
+  Main.createBigText("🎬 PRODUCERS ROOM 🎬");
+  Main.createRupaulAnnouncement("Time to rig the competition! Review the placements and make your changes.");
+  Main.createLine();
+
+  // Create a table to display all queens with their placements and track records
+  let table = document.createElement("table");
+  table.style.width = "95%";
+  table.style.margin = "20px auto";
+  table.style.borderCollapse = "collapse";
+
+  // Header row
+  let thead = document.createElement("thead");
+  let headerRow = document.createElement("tr");
+  headerRow.style.backgroundColor = "#c228ff";
+  headerRow.style.color = "white";
+
+  let headers = ["Queen", "Track Record", "Current Placement", "New Placement"];
+  headers.forEach(headerText => {
+    let th = document.createElement("th");
+    th.innerHTML = headerText;
+    th.style.padding = "10px";
+    th.style.border = "1px solid #ddd";
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // Body rows - one for each queen
+  let tbody = document.createElement("tbody");
+
+  // Get current placement for each queen
+  let getCurrentPlacement = (queen) => {
+    if (TopsQueens.indexOf(queen) !== -1) {
+      if (TopsQueens[0] === queen || (TopsQueens[1] === queen && doublewin)) {
+        return doublewin ? "DOUBLEWIN" : "WIN";
+      }
+      return "TOP2";
+    }
+    if (Tops.indexOf(queen) !== -1) return "HIGH";
+    if (BottomQueens.indexOf(queen) !== -1) return "BOTTOM";
+    if (Bottoms.indexOf(queen) !== -1) return "LOW";
+    return "SAFE";
+  };
+
+  CurrentSeason.currentCast.forEach((queen, index) => {
+    let row = document.createElement("tr");
+    row.style.backgroundColor = index % 2 === 0 ? "#f9f9f9" : "white";
+
+    // Queen name cell with image
+    let nameCell = document.createElement("td");
+    nameCell.style.padding = "10px";
+    nameCell.style.border = "1px solid #ddd";
+    nameCell.style.textAlign = "center";
+    let queenImg = document.createElement("img");
+    queenImg.src = queen.image;
+    queenImg.style.width = "60px";
+    queenImg.style.height = "60px";
+    queenImg.style.borderRadius = "10px";
+    queenImg.style.display = "block";
+    queenImg.style.margin = "0 auto 5px";
+    nameCell.appendChild(queenImg);
+    let queenName = document.createElement("div");
+    queenName.innerHTML = queen.GetName();
+    queenName.style.fontWeight = "bold";
+    nameCell.appendChild(queenName);
+    row.appendChild(nameCell);
+
+    // Track record cell
+    let trCell = document.createElement("td");
+    trCell.style.padding = "10px";
+    trCell.style.border = "1px solid #ddd";
+    trCell.style.textAlign = "center";
+    let trDiv = document.createElement("div");
+    trDiv.style.display = "flex";
+    trDiv.style.justifyContent = "center";
+    trDiv.style.flexWrap = "wrap";
+    trDiv.style.gap = "3px";
+
+    queen.trackrecord.forEach(placement => {
+      let badge = document.createElement("span");
+      badge.innerHTML = placement;
+      badge.style.padding = "3px 6px";
+      badge.style.borderRadius = "3px";
+      badge.style.fontSize = "11px";
+      badge.style.fontWeight = "bold";
+      badge.style.color = "white";
+
+      // Color code based on placement
+      if (placement === "WIN" || placement === "DOUBLEWIN" || placement === "TOP2") {
+        badge.style.backgroundColor = "#1741ff";
+      } else if (placement === "HIGH") {
+        badge.style.backgroundColor = "#17d4ff";
+      } else if (placement === "SAFE") {
+        badge.style.backgroundColor = "#7971c7";
+      } else if (placement === "LOW") {
+        badge.style.backgroundColor = "#ff8a8a";
+      } else if (placement === "BOTTOM") {
+        badge.style.backgroundColor = "#fa2525";
+      }
+
+      trDiv.appendChild(badge);
+    });
+
+    // Add stats
+    let stats = document.createElement("div");
+    stats.innerHTML = `W:${queen.wins} H:${queen.highs} S:${queen.safes} L:${queen.lows} B:${queen.bottoms}`;
+    stats.style.fontSize = "10px";
+    stats.style.marginTop = "5px";
+    stats.style.color = "#666";
+    trDiv.appendChild(stats);
+
+    trCell.appendChild(trDiv);
+    row.appendChild(trCell);
+
+    // Current placement cell
+    let currentCell = document.createElement("td");
+    currentCell.style.padding = "10px";
+    currentCell.style.border = "1px solid #ddd";
+    currentCell.style.textAlign = "center";
+    let currentPlacement = getCurrentPlacement(queen);
+    currentCell.innerHTML = `<strong>${currentPlacement}</strong>`;
+    currentCell.style.fontSize = "14px";
+    row.appendChild(currentCell);
+
+    // New placement dropdown cell
+    let newCell = document.createElement("td");
+    newCell.style.padding = "10px";
+    newCell.style.border = "1px solid #ddd";
+    newCell.style.textAlign = "center";
+    let select = document.createElement("select");
+    select.id = `placement_${index}`;
+    select.setAttribute("data-queen-index", index);
+    select.style.width = "120px";
+    select.style.padding = "5px";
+    select.style.fontSize = "14px";
+
+    let placements = ["WIN", "DOUBLEWIN", "TOP2", "HIGH", "SAFE", "LOW", "BOTTOM"];
+    placements.forEach(p => {
+      let option = document.createElement("option");
+      option.value = p;
+      option.text = p;
+      if (p === currentPlacement) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
+
+    newCell.appendChild(select);
+    row.appendChild(newCell);
+
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+  Main.MainScreen.appendChild(table);
+
+  Main.createLine();
+  Main.createButton("Skip Rigging", "WhoGetsCritiques()");
+  Main.createButton("Confirm Placements", "ApplyProducerChanges()");
+}
+
+function ApplyProducerChanges() {
+  // Clear existing arrays
+  Tops = [];
+  Bottoms = [];
+  TopsQueens = [];
+  BottomQueens = [];
+  Safes = [];
+  doublewin = false;
+
+  // Collect new placements from dropdowns
+  let newPlacements = {};
+  CurrentSeason.currentCast.forEach((queen, index) => {
+    let select = document.getElementById(`placement_${index}`);
+    if (select) {
+      newPlacements[queen.GetName()] = select.value;
+    }
+  });
+
+  // Reorganize queens based on new placements
+  CurrentSeason.currentCast.forEach(queen => {
+    let placement = newPlacements[queen.GetName()];
+
+    switch(placement) {
+      case "WIN":
+        Tops.push(queen);
+        TopsQueens.push(queen);
+        break;
+      case "DOUBLEWIN":
+        Tops.push(queen);
+        TopsQueens.push(queen);
+        doublewin = true;
+        break;
+      case "TOP2":
+        Tops.push(queen);
+        TopsQueens.push(queen);
+        break;
+      case "HIGH":
+        Tops.push(queen);
+        break;
+      case "SAFE":
+        Safes.push(queen);
+        break;
+      case "LOW":
+        Bottoms.push(queen);
+        break;
+      case "BOTTOM":
+        Bottoms.push(queen);
+        BottomQueens.push(queen);
+        break;
+    }
+  });
+
+  // Rebuild Critiqued array
+  Critiqued = [];
+  Tops.forEach(q => Critiqued.push(q));
+  Bottoms.forEach(q => Critiqued.push(q));
+
+  // Continue to normal flow
+  WhoGetsCritiques();
+}
+
 function WhoGetsCritiques()
 {
   let Main = new Screen();
@@ -11441,6 +11666,113 @@ function Placements() {
 }
   
 
+function AutomaticElimination() {
+  // Skip user choice and continue with automatic elimination
+  Steps = 7; // Jump to step 7 which is the original elimination logic
+  Lipsync();
+}
+
+function ApplyEliminationChoice() {
+  // Get user choices
+  let doubleShantay = document.getElementById("doubleShantayCheck").checked;
+
+  // Calculate lipsync scores (needed for the system)
+  BottomQueens.forEach(queen => {
+    queen.GetLipsync();
+    queen.favoritism += -4;
+  });
+
+  // Get eliminated queens based on user choice
+  let eliminatedQueens = [];
+  let stayingQueens = [];
+
+  BottomQueens.forEach((queen, index) => {
+    let sashayRadio = document.getElementById(`sashay_${index}`);
+    if (sashayRadio && sashayRadio.checked && !doubleShantay) {
+      eliminatedQueens.push(queen);
+    } else {
+      stayingQueens.push(queen);
+    }
+  });
+
+  // Display results
+  let Main = new Screen();
+  Main.clean();
+
+  if (doubleShantay) {
+    // Double Shantay - everyone stays
+    Main.createBigText("Shantay you BOTH stay!");
+    BottomQueens.forEach(queen => {
+      Main.createImage(queen.image, "#ff8a8a");
+      queen.trackrecord.push("BOTTOM");
+      queen.ppe += 1;
+    });
+    Main.createText("NOBODY is going home tonight!", 'Bold');
+    Main.createText("You have both made HERSTORY!", 'Bold');
+
+    let ls = new LipsyncSong(BottomQueens, songschosen, CurrentSeason.episodes.length, 'btm', []);
+    CurrentSeason.lipsyncs.push(ls);
+    CurrentSeason.doubleShantay = true;
+
+    Main.createButton("Proceed", "GetPromoTable()");
+  } else if (eliminatedQueens.length === 0) {
+    // User didn't select anyone - default to staying
+    Main.createBigText("Shantay you stay!");
+    BottomQueens.forEach(queen => {
+      Main.createImage(queen.image, "#ff8a8a");
+      queen.trackrecord.push("BOTTOM");
+      queen.ppe += 1;
+    });
+    Main.createText("You all get to stay!", 'Bold');
+
+    let ls = new LipsyncSong(BottomQueens, songschosen, CurrentSeason.episodes.length, 'btm', []);
+    CurrentSeason.lipsyncs.push(ls);
+
+    Main.createButton("Proceed", "GetPromoTable()");
+  } else {
+    // Show staying queens first
+    if (stayingQueens.length > 0) {
+      Main.createBigText("Shantay you stay!");
+      stayingQueens.forEach(queen => {
+        Main.createImage(queen.image, "#ff8a8a");
+        Main.createText(queen.GetName()+", shantay you stay.", 'Bold');
+        queen.trackrecord.push("BOTTOM");
+        queen.ppe += 1;
+      });
+    }
+
+    // Then show eliminated queens
+    Main.createBigText("Sashay away...");
+    eliminatedQueens.forEach(queen => {
+      Main.createImageBW(queen.image, "#fa2525");
+      Main.createText(queen.GetName()+", sashay away.", 'Bold');
+      queen.trackrecord.push("ELIMINATED");
+
+      if(CurrentSeason.eliminatedCast.length==0) {
+        queen.placement = CurrentSeason.fullCast.length-CurrentSeason.eliminatedCast.length;
+      } else {
+        queen.placement = CurrentSeason.fullCast.length-CurrentSeason.eliminatedCast.length;
+      }
+
+      CurrentSeason.currentCast.splice(CurrentSeason.currentCast.indexOf(queen),1);
+      CurrentSeason.eliminatedCast.unshift(queen);
+    });
+
+    let ls = new LipsyncSong(BottomQueens, songschosen, CurrentSeason.episodes.length, 'btm', eliminatedQueens);
+    CurrentSeason.lipsyncs.push(ls);
+
+    if (eliminatedQueens.length > 1) {
+      CurrentSeason.doubleSashay = true;
+    }
+
+    Main.createButton("Proceed", "GetPromoTable()");
+  }
+
+  Steps = 0;
+  TopsQueens = [];
+  BottomQueens = [];
+}
+
 function Lipsync() {
   Main = new Screen();
   Main.clean();
@@ -11601,6 +11933,153 @@ function Lipsync() {
         Main.createText("I have made my decisions.", 'Bold');
         break;
       case 6:
+        // User elimination choice UI
+        Main.createBigText("🎬 PRODUCERS: CHOOSE THE ELIMINATION 🎬");
+        Main.createRupaulAnnouncement("Time to decide who sashays away!");
+
+        // Create elimination choice UI
+        let elimTable = document.createElement("div");
+        elimTable.style.width = "90%";
+        elimTable.style.margin = "20px auto";
+        elimTable.style.padding = "20px";
+        elimTable.style.backgroundColor = "#f9f9f9";
+        elimTable.style.borderRadius = "10px";
+
+        BottomQueens.forEach((queen, index) => {
+          let queenDiv = document.createElement("div");
+          queenDiv.style.display = "flex";
+          queenDiv.style.alignItems = "center";
+          queenDiv.style.marginBottom = "20px";
+          queenDiv.style.padding = "15px";
+          queenDiv.style.backgroundColor = "white";
+          queenDiv.style.borderRadius = "10px";
+          queenDiv.style.border = "2px solid #ddd";
+
+          // Queen image
+          let img = document.createElement("img");
+          img.src = queen.image;
+          img.style.width = "80px";
+          img.style.height = "80px";
+          img.style.borderRadius = "10px";
+          img.style.marginRight = "20px";
+          queenDiv.appendChild(img);
+
+          // Queen info
+          let infoDiv = document.createElement("div");
+          infoDiv.style.flex = "1";
+
+          let name = document.createElement("h3");
+          name.innerHTML = queen.GetName();
+          name.style.margin = "0 0 10px 0";
+          infoDiv.appendChild(name);
+
+          // Track record badges
+          let trDiv = document.createElement("div");
+          trDiv.style.display = "flex";
+          trDiv.style.flexWrap = "wrap";
+          trDiv.style.gap = "5px";
+          trDiv.style.marginBottom = "5px";
+
+          queen.trackrecord.forEach(placement => {
+            let badge = document.createElement("span");
+            badge.innerHTML = placement;
+            badge.style.padding = "4px 8px";
+            badge.style.borderRadius = "4px";
+            badge.style.fontSize = "12px";
+            badge.style.fontWeight = "bold";
+            badge.style.color = "white";
+
+            if (placement === "WIN" || placement === "DOUBLEWIN" || placement === "TOP2") {
+              badge.style.backgroundColor = "#1741ff";
+            } else if (placement === "HIGH") {
+              badge.style.backgroundColor = "#17d4ff";
+            } else if (placement === "SAFE") {
+              badge.style.backgroundColor = "#7971c7";
+            } else if (placement === "LOW") {
+              badge.style.backgroundColor = "#ff8a8a";
+            } else if (placement === "BOTTOM") {
+              badge.style.backgroundColor = "#fa2525";
+            }
+
+            trDiv.appendChild(badge);
+          });
+          infoDiv.appendChild(trDiv);
+
+          // Stats
+          let stats = document.createElement("div");
+          stats.innerHTML = `Wins: ${queen.wins} | Highs: ${queen.highs} | Safes: ${queen.safes} | Lows: ${queen.lows} | Bottoms: ${queen.bottoms}`;
+          stats.style.fontSize = "13px";
+          stats.style.color = "#666";
+          infoDiv.appendChild(stats);
+
+          queenDiv.appendChild(infoDiv);
+
+          // Radio buttons for choice
+          let choiceDiv = document.createElement("div");
+          choiceDiv.style.textAlign = "center";
+
+          let stayRadio = document.createElement("input");
+          stayRadio.type = "radio";
+          stayRadio.name = `queen_${index}`;
+          stayRadio.value = "stay";
+          stayRadio.id = `stay_${index}`;
+          stayRadio.checked = true;
+
+          let stayLabel = document.createElement("label");
+          stayLabel.htmlFor = `stay_${index}`;
+          stayLabel.innerHTML = "SHANTAY";
+          stayLabel.style.marginLeft = "5px";
+          stayLabel.style.marginRight = "15px";
+          stayLabel.style.fontWeight = "bold";
+          stayLabel.style.color = "#1741ff";
+
+          let sashayRadio = document.createElement("input");
+          sashayRadio.type = "radio";
+          sashayRadio.name = `queen_${index}`;
+          sashayRadio.value = "sashay";
+          sashayRadio.id = `sashay_${index}`;
+
+          let sashayLabel = document.createElement("label");
+          sashayLabel.htmlFor = `sashay_${index}`;
+          sashayLabel.innerHTML = "SASHAY";
+          sashayLabel.style.marginLeft = "5px";
+          sashayLabel.style.fontWeight = "bold";
+          sashayLabel.style.color = "#fa2525";
+
+          choiceDiv.appendChild(stayRadio);
+          choiceDiv.appendChild(stayLabel);
+          choiceDiv.appendChild(document.createElement("br"));
+          choiceDiv.appendChild(sashayRadio);
+          choiceDiv.appendChild(sashayLabel);
+
+          queenDiv.appendChild(choiceDiv);
+          elimTable.appendChild(queenDiv);
+        });
+
+        Main.MainScreen.appendChild(elimTable);
+
+        // Double Shantay checkbox
+        let doubleShantayDiv = document.createElement("div");
+        doubleShantayDiv.style.textAlign = "center";
+        doubleShantayDiv.style.margin = "20px";
+        let dsCheckbox = document.createElement("input");
+        dsCheckbox.type = "checkbox";
+        dsCheckbox.id = "doubleShantayCheck";
+        let dsLabel = document.createElement("label");
+        dsLabel.htmlFor = "doubleShantayCheck";
+        dsLabel.innerHTML = " DOUBLE SHANTAY - Nobody goes home!";
+        dsLabel.style.marginLeft = "10px";
+        dsLabel.style.fontSize = "16px";
+        dsLabel.style.fontWeight = "bold";
+        dsLabel.style.color = "#c228ff";
+        doubleShantayDiv.appendChild(dsCheckbox);
+        doubleShantayDiv.appendChild(dsLabel);
+        Main.MainScreen.appendChild(doubleShantayDiv);
+
+        Main.createButton("Skip - Auto Eliminate", "AutomaticElimination()");
+        Main.createButton("Confirm Elimination", "ApplyEliminationChoice()");
+        break;
+      case 7:
         Main.createBigText("Shantay you stay...");
         for(let i = 0; i < BottomQueens.length; i++)
         {
@@ -12386,7 +12865,7 @@ function GenerateChallenge()
     if((CurrentChallenge.type=="BALL" && Steps==3) ||CurrentChallenge.type!="BALL")
     {
       RankQueens();
-      Main.createButton("Proceed", "WhoGetsCritiques()");
+      Main.createButton("Proceed", "ProducersRoom()");
       Steps = 0;
     }
     else
@@ -13599,7 +14078,7 @@ function TrackRecords()
 
   else if(done==false)
   {
-    MainScreen.createButton("Proceed","ChallengeAnnouncement()");
+    MainScreen.createButton("Proceed","ChallengeSelector()");
   }
 
   MainScreen.createButton("Download", "convertToImage()");
@@ -13639,7 +14118,7 @@ function Songs()
 
   else if(done==false)
   {
-    MainScreen.createButton("Proceed","ChallengeAnnouncement()");
+    MainScreen.createButton("Proceed","ChallengeSelector()");
   }
 
   MainScreen.createButton("Download", "convertToImage2()");
@@ -13679,7 +14158,7 @@ function SStorylines()
 
   else if(done==false)
   {
-    MainScreen.createButton("Proceed","ChallengeAnnouncement()");
+    MainScreen.createButton("Proceed","ChallengeSelector()");
   }
 
   MainScreen.createButton("Download", "convertToImage3()");
