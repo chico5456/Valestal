@@ -1457,9 +1457,39 @@ class Screen {
 
       track.append(td);
 
+      const isDoublePremiereSecondGroup = CurrentSeason.premiereformat === "DOUBLEPREMIERE" && queen.premieregroup === 1;
+      const hasLeadingPlaceholder = queen.trackrecord[0] === "";
+      const applyDoublePremiereOffset = isDoublePremiereSecondGroup && !hasLeadingPlaceholder;
+
+      if(applyDoublePremiereOffset)
+      {
+        console.debug("[TrackRecords] Applying double premiere offset", {
+          queen: queen.GetName(),
+          premiereGroup: queen.premieregroup,
+          episodes: episodesCount,
+          trackRecord: queen.trackrecord.slice()
+        });
+      }
+
       for(let episodeIndex = 0; episodeIndex < episodesCount; episodeIndex++)
       {
-        let placement = queen.trackrecord[episodeIndex];
+        let placement;
+
+        if(applyDoublePremiereOffset)
+        {
+          if(episodeIndex === 0)
+          {
+            placement = "";
+          }
+          else
+          {
+            placement = queen.trackrecord[episodeIndex - 1];
+          }
+        }
+        else
+        {
+          placement = queen.trackrecord[episodeIndex];
+        }
         let trtr = document.createElement("td");
 
         if(placement === undefined || placement === '')
