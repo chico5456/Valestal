@@ -9332,17 +9332,82 @@ function ProducersRoom() {
   // Body rows - one for each queen
   let tbody = document.createElement("tbody");
 
-  // Get current placement for each queen
+  // Helper styles for placement badges
+  const placementStyles = {
+    "WIN": "#1741ff",
+    "DOUBLEWIN": "#1741ff",
+    "TOP2": "#1741ff",
+    "HIGH": "#17d4ff",
+    "SAFE": "#7971c7",
+    "LOW": "#ff8a8a",
+    "BOTTOM": "#fa2525"
+  };
+
+  const buildPlacementChip = (label, isSelected = false, clickable = false) => {
+    let chip = document.createElement("span");
+    chip.innerHTML = label;
+    chip.style.display = "inline-block";
+    chip.style.padding = "6px 10px";
+    chip.style.borderRadius = "4px";
+    chip.style.fontSize = "12px";
+    chip.style.fontWeight = "bold";
+    chip.style.color = "white";
+    chip.style.backgroundColor = placementStyles[label] || "#444";
+    chip.style.transition = "all .15s ease-in-out";
+    chip.style.boxShadow = isSelected ? "0 0 0 3px rgba(0,0,0,0.3)" : "0 0 0 1px rgba(0,0,0,0.1)";
+    chip.style.opacity = isSelected ? "1" : "0.8";
+    chip.style.cursor = clickable ? "pointer" : "default";
+    return chip;
+  };
+
+  // Determine default placements before any rigging happens
   let getCurrentPlacement = (queen) => {
-    if (TopsQueens.indexOf(queen) !== -1) {
-      if (TopsQueens[0] === queen || (TopsQueens[1] === queen && doublewin)) {
-        return doublewin ? "DOUBLEWIN" : "WIN";
+    let winners = [];
+    if (TopsQueens.length > 0) {
+      winners = TopsQueens.slice();
+    } else if (Tops.length > 0) {
+      winners.push(Tops[0]);
+      if (doublewin && Tops.length > 1) {
+        winners.push(Tops[1]);
       }
-      return "HIGH";  // Changed from TOP2 to HIGH
     }
-    if (Tops.indexOf(queen) !== -1) return "HIGH";
-    if (BottomQueens.indexOf(queen) !== -1) return "BOTTOM";
-    if (Bottoms.indexOf(queen) !== -1) return "LOW";
+
+    if (!doublewin && winners.length === 1 && Tops.length > 1) {
+      if (Tops[0] && Tops[1] && Tops[0].perfomancescore === Tops[1].perfomancescore && Tops[0].perfomancescore < 5) {
+        winners.push(Tops[1]);
+      }
+    }
+
+    let lipSyncers = [];
+    if (BottomQueens.length > 0) {
+      lipSyncers = BottomQueens.slice();
+    } else if (Bottoms.length > 0) {
+      lipSyncers.push(Bottoms[0]);
+      if (Bottoms.length > 1) {
+        lipSyncers.push(Bottoms[1]);
+      }
+    }
+
+    let hasDoubleWin = doublewin || winners.length > 1;
+
+    if (winners.indexOf(queen) !== -1) {
+      if (CurrentSeason.lipsyncformat === "AS7") {
+        return "TOP2";
+      }
+      if (hasDoubleWin) {
+        return "DOUBLEWIN";
+      }
+      return "WIN";
+    }
+    if (Tops.indexOf(queen) !== -1) {
+      return "HIGH";
+    }
+    if (lipSyncers.indexOf(queen) !== -1) {
+      return "BOTTOM";
+    }
+    if (Bottoms.indexOf(queen) !== -1) {
+      return "LOW";
+    }
     return "SAFE";
   };
 
@@ -9422,8 +9487,11 @@ function ProducersRoom() {
     currentCell.style.border = "1px solid #ddd";
     currentCell.style.textAlign = "center";
     let currentPlacement = getCurrentPlacement(queen);
-    currentCell.innerHTML = `<strong>${currentPlacement}</strong>`;
-    currentCell.style.fontSize = "14px";
+    let currentChip = buildPlacementChip(currentPlacement);
+    currentChip.style.opacity = "1";
+    currentChip.style.boxShadow = "0 0 0 2px rgba(0,0,0,0.2)";
+    currentChip.style.fontSize = "13px";
+    currentCell.appendChild(currentChip);
     row.appendChild(currentCell);
 
     // New placement dropdown cell
@@ -9434,11 +9502,17 @@ function ProducersRoom() {
     let select = document.createElement("select");
     select.id = `placement_${index}`;
     select.setAttribute("data-queen-index", index);
-    select.style.width = "120px";
-    select.style.padding = "5px";
-    select.style.fontSize = "14px";
+    select.style.width = "0";
+    select.style.height = "0";
+    select.style.opacity = "0";
+    select.style.pointerEvents = "none";
 
     let placements = ["WIN", "DOUBLEWIN", "TOP2", "HIGH", "SAFE", "LOW", "BOTTOM"];
+    let optionsWrapper = document.createElement("div");
+    optionsWrapper.style.display = "flex";
+    optionsWrapper.style.flexWrap = "wrap";
+    optionsWrapper.style.justifyContent = "center";
+    optionsWrapper.style.gap = "8px";
     placements.forEach(p => {
       let option = document.createElement("option");
       option.value = p;
@@ -9447,8 +9521,23 @@ function ProducersRoom() {
         option.selected = true;
       }
       select.appendChild(option);
+
+      let chip = buildPlacementChip(p, p === currentPlacement, true);
+      chip.dataset.placementValue = p;
+      chip.addEventListener("click", () => {
+        let siblings = optionsWrapper.querySelectorAll("span");
+        siblings.forEach(sib => {
+          sib.style.boxShadow = "0 0 0 1px rgba(0,0,0,0.1)";
+          sib.style.opacity = "0.8";
+        });
+        chip.style.boxShadow = "0 0 0 3px rgba(0,0,0,0.3)";
+        chip.style.opacity = "1";
+        select.value = p;
+      });
+      optionsWrapper.appendChild(chip);
     });
 
+    newCell.appendChild(optionsWrapper);
     newCell.appendChild(select);
     row.appendChild(newCell);
 
@@ -11750,7 +11839,8 @@ function AutomaticElimination() {
 
 function ApplyEliminationChoice() {
   // Get user choices
-  let doubleShantay = document.getElementById("doubleShantayCheck").checked;
+  let doubleShantayElement = document.getElementById("doubleShantayCheck");
+  let doubleShantay = doubleShantayElement ? doubleShantayElement.checked : false;
 
   // Calculate lipsync scores (needed for the system)
   BottomQueens.forEach(queen => {
@@ -11762,14 +11852,36 @@ function ApplyEliminationChoice() {
   let eliminatedQueens = [];
   let stayingQueens = [];
 
-  BottomQueens.forEach((queen, index) => {
-    let sashayRadio = document.getElementById(`sashay_${index}`);
-    if (sashayRadio && sashayRadio.checked && !doubleShantay) {
-      eliminatedQueens.push(queen);
-    } else {
-      stayingQueens.push(queen);
+  let choiceCards = document.querySelectorAll(".producer-save-card");
+
+  if (doubleShantay) {
+    stayingQueens = BottomQueens.slice();
+  } else if (choiceCards.length > 0) {
+    choiceCards.forEach(card => {
+      let queenIndex = parseInt(card.dataset.queenIndex);
+      if (isNaN(queenIndex) || queenIndex < 0 || queenIndex >= BottomQueens.length) {
+        return;
+      }
+      let queen = BottomQueens[queenIndex];
+      if (card.dataset.saved === "true") {
+        if (stayingQueens.indexOf(queen) === -1) {
+          stayingQueens.push(queen);
+        }
+      } else {
+        if (eliminatedQueens.indexOf(queen) === -1) {
+          eliminatedQueens.push(queen);
+        }
+      }
+    });
+
+    let anyTouched = Array.from(choiceCards).some(card => card.dataset.touched === "true");
+    if (stayingQueens.length === 0 && !anyTouched) {
+      stayingQueens = BottomQueens.slice();
+      eliminatedQueens = [];
     }
-  });
+  } else {
+    stayingQueens = BottomQueens.slice();
+  }
 
   // Display results
   let Main = new Screen();
@@ -12009,59 +12121,76 @@ function Lipsync() {
         Main.createText("I have made my decisions.", 'Bold');
         break;
       case 6:
-        // User elimination choice UI
         Main.createBigText("🎬 PRODUCERS: CHOOSE THE ELIMINATION 🎬");
-        Main.createRupaulAnnouncement("Time to decide who sashays away!");
+        Main.createRupaulAnnouncement("Tap the queens you want to save. Unselected queens will sashay away.");
 
-        // Create elimination choice UI
-        let elimTable = document.createElement("div");
-        elimTable.style.width = "90%";
-        elimTable.style.margin = "20px auto";
-        elimTable.style.padding = "20px";
-        elimTable.style.backgroundColor = "#f9f9f9";
-        elimTable.style.borderRadius = "10px";
+        let instructions = document.createElement("p");
+        instructions.innerHTML = "Click a queen to <strong>save her</strong>. Click again to undo.";
+        instructions.style.textAlign = "center";
+        instructions.style.fontSize = "16px";
+        instructions.style.fontWeight = "bold";
+        instructions.style.color = "#c228ff";
+        instructions.style.marginTop = "10px";
+        Main.MainScreen.appendChild(instructions);
+
+        let elimGrid = document.createElement("div");
+        elimGrid.style.display = "grid";
+        elimGrid.style.gridTemplateColumns = "repeat(auto-fit, minmax(220px, 1fr))";
+        elimGrid.style.gap = "20px";
+        elimGrid.style.margin = "25px auto";
+        elimGrid.style.width = "95%";
 
         BottomQueens.forEach((queen, index) => {
-          let queenDiv = document.createElement("div");
-          queenDiv.style.display = "flex";
-          queenDiv.style.alignItems = "center";
-          queenDiv.style.marginBottom = "20px";
-          queenDiv.style.padding = "15px";
-          queenDiv.style.backgroundColor = "white";
-          queenDiv.style.borderRadius = "10px";
-          queenDiv.style.border = "2px solid #ddd";
+          let card = document.createElement("div");
+          card.classList.add("producer-save-card");
+          card.dataset.queenIndex = index;
+          card.dataset.saved = "false";
+          card.style.background = "white";
+          card.style.borderRadius = "14px";
+          card.style.border = "3px solid #fa2525";
+          card.style.boxShadow = "0 8px 18px rgba(0,0,0,0.12)";
+          card.style.padding = "18px";
+          card.style.textAlign = "center";
+          card.style.cursor = "pointer";
+          card.style.transition = "transform .2s ease, box-shadow .2s ease, border-color .2s ease";
 
-          // Queen image
           let img = document.createElement("img");
           img.src = queen.image;
-          img.style.width = "80px";
-          img.style.height = "80px";
-          img.style.borderRadius = "10px";
-          img.style.marginRight = "20px";
-          queenDiv.appendChild(img);
-
-          // Queen info
-          let infoDiv = document.createElement("div");
-          infoDiv.style.flex = "1";
+          img.style.width = "110px";
+          img.style.height = "110px";
+          img.style.borderRadius = "12px";
+          img.style.objectFit = "cover";
+          img.style.marginBottom = "12px";
+          card.appendChild(img);
 
           let name = document.createElement("h3");
           name.innerHTML = queen.GetName();
-          name.style.margin = "0 0 10px 0";
-          infoDiv.appendChild(name);
+          name.style.margin = "0";
+          name.style.fontSize = "18px";
+          name.style.color = "#2b134d";
+          card.appendChild(name);
 
-          // Track record badges
+          let tagline = document.createElement("div");
+          tagline.innerHTML = "Click to save";
+          tagline.style.marginTop = "6px";
+          tagline.style.fontWeight = "bold";
+          tagline.style.fontSize = "13px";
+          tagline.style.color = "#fa2525";
+          card.appendChild(tagline);
+
           let trDiv = document.createElement("div");
           trDiv.style.display = "flex";
           trDiv.style.flexWrap = "wrap";
-          trDiv.style.gap = "5px";
-          trDiv.style.marginBottom = "5px";
+          trDiv.style.justifyContent = "center";
+          trDiv.style.gap = "4px";
+          trDiv.style.marginTop = "12px";
 
           queen.trackrecord.forEach(placement => {
             let badge = document.createElement("span");
             badge.innerHTML = placement;
             badge.style.padding = "4px 8px";
             badge.style.borderRadius = "4px";
-            badge.style.fontSize = "12px";
+            badge.style.fontSize = "11px";
             badge.style.fontWeight = "bold";
             badge.style.color = "white";
 
@@ -12079,62 +12208,43 @@ function Lipsync() {
 
             trDiv.appendChild(badge);
           });
-          infoDiv.appendChild(trDiv);
 
-          // Stats
+          card.appendChild(trDiv);
+
           let stats = document.createElement("div");
-          stats.innerHTML = `Wins: ${queen.wins} | Highs: ${queen.highs} | Safes: ${queen.safes} | Lows: ${queen.lows} | Bottoms: ${queen.bottoms}`;
-          stats.style.fontSize = "13px";
-          stats.style.color = "#666";
-          infoDiv.appendChild(stats);
+          stats.innerHTML = `Wins: ${queen.wins} • High: ${queen.highs} • Low: ${queen.lows} • Bottom: ${queen.bottoms}`;
+          stats.style.fontSize = "11px";
+          stats.style.marginTop = "8px";
+          stats.style.color = "#555";
+          card.appendChild(stats);
 
-          queenDiv.appendChild(infoDiv);
+          const toggleSelection = () => {
+            card.dataset.touched = "true";
+            let isSaved = card.dataset.saved === "true";
+            if (isSaved) {
+              card.dataset.saved = "false";
+              card.style.borderColor = "#fa2525";
+              card.style.boxShadow = "0 8px 18px rgba(0,0,0,0.12)";
+              card.style.transform = "scale(1)";
+              tagline.innerHTML = "Click to save";
+              tagline.style.color = "#fa2525";
+            } else {
+              card.dataset.saved = "true";
+              card.style.borderColor = "#17d4ff";
+              card.style.boxShadow = "0 12px 22px rgba(23,212,255,0.35)";
+              card.style.transform = "scale(1.04)";
+              tagline.innerHTML = "Saved!";
+              tagline.style.color = "#17d4ff";
+            }
+          };
 
-          // Radio buttons for choice
-          let choiceDiv = document.createElement("div");
-          choiceDiv.style.textAlign = "center";
+          card.addEventListener("click", toggleSelection);
 
-          let stayRadio = document.createElement("input");
-          stayRadio.type = "radio";
-          stayRadio.name = `queen_${index}`;
-          stayRadio.value = "stay";
-          stayRadio.id = `stay_${index}`;
-          stayRadio.checked = true;
-
-          let stayLabel = document.createElement("label");
-          stayLabel.htmlFor = `stay_${index}`;
-          stayLabel.innerHTML = "SHANTAY";
-          stayLabel.style.marginLeft = "5px";
-          stayLabel.style.marginRight = "15px";
-          stayLabel.style.fontWeight = "bold";
-          stayLabel.style.color = "#1741ff";
-
-          let sashayRadio = document.createElement("input");
-          sashayRadio.type = "radio";
-          sashayRadio.name = `queen_${index}`;
-          sashayRadio.value = "sashay";
-          sashayRadio.id = `sashay_${index}`;
-
-          let sashayLabel = document.createElement("label");
-          sashayLabel.htmlFor = `sashay_${index}`;
-          sashayLabel.innerHTML = "SASHAY";
-          sashayLabel.style.marginLeft = "5px";
-          sashayLabel.style.fontWeight = "bold";
-          sashayLabel.style.color = "#fa2525";
-
-          choiceDiv.appendChild(stayRadio);
-          choiceDiv.appendChild(stayLabel);
-          choiceDiv.appendChild(document.createElement("br"));
-          choiceDiv.appendChild(sashayRadio);
-          choiceDiv.appendChild(sashayLabel);
-
-          queenDiv.appendChild(choiceDiv);
-          elimTable.appendChild(queenDiv);
+          elimGrid.appendChild(card);
         });
 
-        Main.MainScreen.appendChild(elimTable);
+        Main.MainScreen.appendChild(elimGrid);
 
-        // Double Shantay checkbox
         let doubleShantayDiv = document.createElement("div");
         doubleShantayDiv.style.textAlign = "center";
         doubleShantayDiv.style.margin = "20px";
@@ -12152,7 +12262,6 @@ function Lipsync() {
         doubleShantayDiv.appendChild(dsLabel);
         Main.MainScreen.appendChild(doubleShantayDiv);
 
-        Main.createButton("Skip - Auto Eliminate", "AutomaticElimination()");
         Main.createButton("Confirm Elimination", "ApplyEliminationChoice()");
         break;
       case 7:
