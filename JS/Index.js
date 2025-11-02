@@ -1422,16 +1422,101 @@ class Screen {
       treps.append(thep);
     }
 
+    const premiereFormat = CurrentSeason.premiereformat;
+    const doublePremiereFormats = ["DOUBLEPREMIERE", "S6", "S12"];
+
+    const normaliseTrackRecord = (queen, episodesCount) => {
+      const placements = new Array(episodesCount).fill("");
+      const baseTrack = queen.trackrecord.slice();
+      const queenPremiereGroup = typeof queen.premieregroup === "string" ? parseInt(queen.premieregroup, 10) : queen.premieregroup;
+      const isDoublePremiereQueen = doublePremiereFormats.includes(premiereFormat) && queenPremiereGroup === 1;
+      let offset = 0;
+
+      if(isDoublePremiereQueen)
+      {
+        if(baseTrack.length === episodesCount - 1)
+        {
+          offset = 1;
+          console.log("[TrackRecords] Derived double-premiere offset", {
+            queen: queen.GetName(),
+            baseTrack,
+            episodesCount
+          });
+        }
+        else if(baseTrack.length === episodesCount)
+        {
+          console.log("[TrackRecords] Double-premiere data already aligned", {
+            queen: queen.GetName(),
+            baseTrack,
+            episodesCount
+          });
+        }
+        else
+        {
+          console.log("[TrackRecords] Unexpected double-premiere track length", {
+            queen: queen.GetName(),
+            baseTrack,
+            episodesCount
+          });
+        }
+      }
+      else if(baseTrack.length !== episodesCount)
+      {
+        console.log("[TrackRecords] Placement mismatch", {
+          queen: queen.GetName(),
+          baseTrack,
+          episodesCount
+        });
+      }
+
+      for(let i = 0; i < baseTrack.length; i++)
+      {
+        const targetIndex = i + offset;
+        if(targetIndex < placements.length)
+        {
+          placements[targetIndex] = baseTrack[i];
+        }
+        else
+        {
+          console.log("[TrackRecords] Placement overflow", {
+            queen: queen.GetName(),
+            baseTrack,
+            targetIndex,
+            episodesCount
+          });
+        }
+      }
+
+      console.log("[TrackRecords] Normalised row", {
+        queen: queen.GetName(),
+        placements,
+        baseTrack,
+        offset,
+        episodesCount
+      });
+
+      return placements;
+    };
+
+    console.log("[TrackRecords] Rendering", {
+      episodeCount: CurrentSeason.episodes.length,
+      premiereFormat,
+      doublePremiereFormats
+    });
+
     for(let q = 0; q < CurrentSeason.currentCast.length; q++)
     {
       let track = document.createElement("tr");
 
+      let queen = CurrentSeason.currentCast[q];
+      let episodesCount = CurrentSeason.episodes.length;
+      const placements = normaliseTrackRecord(queen, episodesCount);
+
       let qname = document.createElement("td");
 
-      qname.innerHTML = CurrentSeason.currentCast[q].GetName();
-
+      qname.innerHTML = queen.GetName();
       if(CurrentSeason.animals == true){
-        qname.innerHTML += "<br><small>("+CurrentSeason.currentCast[q].animal.name+")</small>";
+        qname.innerHTML += "<br><small>("+queen.animal.name+")</small>";
       }
 
       qname.setAttribute("class","trq");
@@ -1442,118 +1527,191 @@ class Screen {
 
       let td = document.createElement("td");
 
-      td.setAttribute("style", "background: url("+ CurrentSeason.currentCast[q].image +"); background-size: 102px 102px; background-position: center;");
+      td.setAttribute("style", "background: url("+ queen.image +"); background-size: 102px 102px; background-position: center;");
 
       track.append(td);
 
-      for(let t = 0; t < CurrentSeason.currentCast[q].trackrecord.length; t++)
+      for(let episodeIndex = 0; episodeIndex < episodesCount; episodeIndex++)
       {
+        const placement = placements[episodeIndex];
         let trtr = document.createElement("td");
 
-        trtr.innerHTML = CurrentSeason.currentCast[q].trackrecord[t];
-
-        switch(CurrentSeason.currentCast[q].trackrecord[t])
+        if(placement === undefined || placement === '')
         {
-          case "L3RD":
-            trtr.innerHTML = "LOST <br> 3RD ROUND";
-            trtr.setAttribute("style","background: #FFD100; font-weight: bold;");
-            break;
-          
-          case "L2RD":
-            trtr.innerHTML = "LOST <br> 2ND ROUND";
-            trtr.setAttribute("style","background: #FFAE00; font-weight: bold;");
-            break;
-          
-          case "L1RD":
-            trtr.innerHTML = "LOST <br> 1ST ROUND";
-            trtr.setAttribute("style","background: #FF7C00; font-weight: bold;");
-            break;
+          trtr.innerHTML = "—";
+          trtr.setAttribute("style","background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #ececec 10px, #ececec 20px); color: #555; font-style: italic;");
+          console.log("[TrackRecords] Blank placement cell", {
+            queen: queen.GetName(),
+            episode: episodeIndex + 1,
+            episodesCount,
+            placements
+          });
+        }
+        else
+        {
+          trtr.innerHTML = placement;
 
-          case "ELIM ":
-            trtr.innerHTML = "ELIMINATED";
-            trtr.setAttribute("style","background: sienna; font-weight: bold;");
-            break;
+          switch(placement)
+          {
+            case "L3RD":
+              trtr.innerHTML = "LOST <br> 3RD ROUND";
+              trtr.setAttribute("style","background: #FFD100; font-weight: bold;");
+              break;
 
-          case "GUEST":
-            trtr.setAttribute("style","background: gainsboro; font-weight: bold;");
-            break;
+            case "L2RD":
+              trtr.innerHTML = "LOST <br> 2ND ROUND";
+              trtr.setAttribute("style","background: #FFAE00; font-weight: bold;");
+              break;
 
-          case "WINNER":
-            trtr.setAttribute("style","background: yellow; font-weight: bold;");
-            break;
-            
-          case "RUNNER UP":
-            trtr.setAttribute("style","background: silver; font-weight: bold;");
-            break;
+            case "L1RD":
+              trtr.innerHTML = "LOST <br> 1ST ROUND";
+              trtr.setAttribute("style","background: #FF7C00; font-weight: bold;");
+              break;
 
-          case "TOP 2":
-            trtr.setAttribute("style","background: lightgreen; font-weight: bold;");
-            break;
+            case "ELIM ":
+              trtr.innerHTML = "ELIMINATED";
+              trtr.setAttribute("style","background: sienna; font-weight: bold;");
+              break;
 
-          case "TOP2":
-            trtr.innerHTML = "WIN";
-            trtr.setAttribute("style","background: deepskyblue; font-weight: bold;");
-            break;
+            case "GUEST":
+              trtr.setAttribute("style","background: gainsboro; font-weight: bold;");
+              break;
 
-          case "TOP 3":
-            
-            trtr.setAttribute("style","background: lightgreen; font-weight: bold;");
-            break;
+            case "WINNER":
+              trtr.setAttribute("style","background: yellow; font-weight: bold;");
+              break;
 
-          case "TOP 4":
-            trtr.setAttribute("style","background: lightgreen; font-weight: bold;");
-            break;
+            case "RUNNER UP":
+              trtr.setAttribute("style","background: silver; font-weight: bold;");
+              break;
 
-          case "WIN":
-            trtr.setAttribute("style","background: royalblue; font-weight: bold; color: white;");
-            break;
-          
-          case "HIGH":
-            trtr.setAttribute("style","background: lightblue");
-            break;
-          
-          case "HIGH+BLOCK":
-            trtr.innerHTML = "HIGH <br> + <br> <b>BLOCK</b>";
-            trtr.setAttribute("style","background: #D66D73");
-            break;
+            case "TOP 2":
+              trtr.setAttribute("style","background: lightgreen; font-weight: bold;");
+              break;
 
-          case "BLOCK":
-            trtr.innerHTML = "<b>BLOCK</b>";
-            trtr.setAttribute("style","background: red");
-            break;
-          
-          case "SAFE":
-            trtr.setAttribute("style","background: #F5EBF5;");
-            break;
+            case "TOP2":
+              trtr.innerHTML = "WIN";
+              trtr.setAttribute("style","background: deepskyblue; font-weight: bold;");
+              break;
 
-          case "LOW":
-            trtr.setAttribute("style","background: lightpink");
-            break;
+            case "TOP 3":
+              trtr.setAttribute("style","background: lightgreen; font-weight: bold;");
+              break;
 
-          case "BOTTOM":
-            trtr.setAttribute("style","background: tomato");
-            break;
+            case "TOP 4":
+              trtr.setAttribute("style","background: lightgreen; font-weight: bold;");
+              break;
 
-          case "ELIMINATED":
-            trtr.setAttribute("style","background: red; font-weight: bold;");
-            break;
-          
-          case "DOUBLEWIN":
-            trtr.innerHTML = "WIN";
-            trtr.setAttribute("style","background: darkblue; font-weight: bold; color: white;");
-            break;
+            case "WIN":
+              trtr.setAttribute("style","background: royalblue; font-weight: bold; color: white;");
+              break;
 
-          default:
-            trtr.setAttribute("style","background: #A9A9A9");
-            break;
+            case "HIGH":
+              trtr.setAttribute("style","background: lightblue");
+              break;
+
+            case "HIGH+BLOCK":
+              trtr.innerHTML = "HIGH <br> + <br> <b>BLOCK</b>";
+              trtr.setAttribute("style","background: #D66D73");
+              break;
+
+            case "BLOCK":
+              trtr.innerHTML = "<b>BLOCK</b>";
+              trtr.setAttribute("style","background: red;");
+              break;
+
+            case "SAFE":
+              trtr.setAttribute("style","background: #F5EBF5;");
+              break;
+
+            case "LOW":
+              trtr.setAttribute("style","background: lightpink");
+              break;
+
+            case "BOTTOM":
+              trtr.setAttribute("style","background: tomato");
+              break;
+
+            case "ELIMINATED":
+              trtr.setAttribute("style","background: red; font-weight: bold;");
+              break;
+
+            case "DOUBLEWIN":
+              trtr.innerHTML = "WIN";
+              trtr.setAttribute("style","background: darkblue; font-weight: bold; color: white;");
+              break;
+
+            case "BTM2 ":
+              trtr.innerHTML = "BTM 2";
+              trtr.setAttribute("style","background: crimson; font-weight: bold; color: white;");
+              break;
+
+            case "BTM3 ":
+              trtr.innerHTML = "BTM 3";
+              trtr.setAttribute("style","background: crimson; font-weight: bold; color: white;");
+              break;
+
+            case "BTM4":
+              trtr.innerHTML = "BTM4";
+              trtr.setAttribute("style","background: crimson; font-weight: bold; color: white;");
+              break;
+
+            case "BTM5":
+              trtr.innerHTML = "BTM5";
+              trtr.setAttribute("style","background: crimson; font-weight: bold; color: white;");
+              break;
+
+            case "MISS CONGENIALITY":
+              trtr.setAttribute("style","background: aqua; color: font-weight: bold;");
+              break;
+
+            case "SAVED":
+              trtr.innerHTML = "SAVED";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            case "SAVED+CHOC":
+              trtr.innerHTML = "SAVED <br> + <br> CHOCOLATE";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            case "SAVED+VOTE":
+              trtr.innerHTML = "SAVED <br> + <br> VOTE";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            case "SAVED+RTRN":
+              trtr.innerHTML = "SAVED <br> + <br> RETURNED";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            case "SAVED+RTRN+CHOC":
+              trtr.innerHTML = "SAVED <br> + <br> RETURNED <br> + <br> CHOCOLATE";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            case "SAVED+RTRN+VOTE":
+              trtr.innerHTML = "SAVED <br> + <br> RETURNED <br> + <br> VOTE";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            case "SAVED+RTRN+CHOC+VOTE":
+              trtr.innerHTML = "SAVED <br> + <br> RETURNED <br> + <br> CHOCOLATE <br> + <br> VOTE";
+              trtr.setAttribute("style","background: mediumspringgreen; font-weight: bold; color: black;");
+              break;
+
+            default:
+              trtr.setAttribute("style","background: #A9A9A9");
+              break;
+          }
         }
 
-        if(CurrentSeason.currentCast[q].miniwon.indexOf(t+1)!=-1)
+        if(queen.miniwon.indexOf(episodeIndex+1)!=-1)
         {
           trtr.innerHTML += "<br><small><i> Mini-Challenge Winner </i></small>";
         }
 
-        if(CurrentSeason.currentCast[q].immune.indexOf(t+1)!=-1)
+        if(queen.immune.indexOf(episodeIndex+1)!=-1)
         {
           trtr.setAttribute("style","background: magenta");
         }
@@ -1586,7 +1744,6 @@ class Screen {
 
       tbody.append(track);
     }
-
     for(let q = 0; q < CurrentSeason.eliminatedCast.length; q++)
     {
       let track = document.createElement("tr");
@@ -9280,6 +9437,360 @@ let DragRaceQueens = [
 
 //#region Commands
 
+function ProducersRoom() {
+  let Main = new Screen();
+  Main.clean();
+  Main.createBigText("🎬 PRODUCERS ROOM 🎬");
+  Main.createRupaulAnnouncement("Time to rig the competition! Review the placements and make your changes.");
+  Main.createLine();
+
+  // Create a table to display all queens with their placements and track records
+  let table = document.createElement("table");
+  table.style.width = "95%";
+  table.style.margin = "20px auto";
+  table.style.borderCollapse = "collapse";
+
+  // Header row
+  let thead = document.createElement("thead");
+  let headerRow = document.createElement("tr");
+  headerRow.style.backgroundColor = "#c228ff";
+  headerRow.style.color = "white";
+
+  let headers = ["Queen", "Track Record", "Current Placement", "New Placement"];
+  headers.forEach(headerText => {
+    let th = document.createElement("th");
+    th.innerHTML = headerText;
+    th.style.padding = "10px";
+    th.style.border = "1px solid #ddd";
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // Body rows - one for each queen
+  let tbody = document.createElement("tbody");
+
+  // Helper styles for placement badges
+  const placementStyles = {
+    "WIN": "#1741ff",
+    "DOUBLEWIN": "#1741ff",
+    "TOP2": "#1741ff",
+    "HIGH": "#17d4ff",
+    "SAFE": "#7971c7",
+    "LOW": "#ff8a8a",
+    "BOTTOM": "#fa2525"
+  };
+
+  const buildPlacementChip = (label, isSelected = false, clickable = false) => {
+    let chip = document.createElement("span");
+    chip.innerHTML = label;
+    chip.style.display = "inline-block";
+    chip.style.padding = "6px 10px";
+    chip.style.borderRadius = "4px";
+    chip.style.fontSize = "12px";
+    chip.style.fontWeight = "bold";
+    chip.style.color = "white";
+    chip.style.backgroundColor = placementStyles[label] || "#444";
+    chip.style.transition = "all .15s ease-in-out";
+    chip.style.boxShadow = isSelected ? "0 0 0 3px rgba(0,0,0,0.3)" : "0 0 0 1px rgba(0,0,0,0.1)";
+    chip.style.opacity = isSelected ? "1" : "0.8";
+    chip.style.cursor = clickable ? "pointer" : "default";
+    return chip;
+  };
+
+  const predictedPlacements = new Map();
+
+  const assignPlacement = (queen, placement) => {
+    if(!queen) {
+      return;
+    }
+    predictedPlacements.set(queen, placement);
+  };
+
+  const buildAdjustedTopOrder = () => {
+    let ordered = Tops.map(queen => {
+      let lastPlacement = queen.trackrecord[queen.trackrecord.length-1];
+      let adjustment = 0;
+      if(lastPlacement == "WIN" || lastPlacement == "DOUBLEWIN") {
+        adjustment += 15;
+      }
+      else if(lastPlacement == "BOTTOM") {
+        adjustment -= 15;
+      }
+      return { queen: queen, adjusted: queen.finalscore + adjustment };
+    });
+    ordered.sort((a, b) => a.adjusted - b.adjusted);
+    return ordered.map(entry => entry.queen);
+  };
+
+  const calculateDefaultPlacements = () => {
+    Safes.forEach(queen => assignPlacement(queen, "SAFE"));
+
+    if(CurrentSeason.premiereformat == "DOUBLEPREMIERE" && CurrentSeason.episodes.length <= 2) {
+      let orderedTops = Tops.slice().sort((a, b) => a.perfomancescore - b.perfomancescore);
+      orderedTops.slice(0,2).forEach(queen => assignPlacement(queen, "TOP2"));
+      orderedTops.slice(2).forEach(queen => assignPlacement(queen, "HIGH"));
+    }
+    else if(CurrentSeason.lipsyncformat == "AS7") {
+      let orderedTops = Tops.slice().sort((a, b) => a.finalscore - b.finalscore);
+      assignPlacement(orderedTops[0], "WIN");
+      assignPlacement(orderedTops[1], "TOP2");
+      orderedTops.slice(2).forEach(queen => assignPlacement(queen, "HIGH"));
+    }
+    else {
+      let orderedTops = buildAdjustedTopOrder();
+      let potentialWinners = orderedTops.slice(0, Math.min(2, orderedTops.length));
+      let isDoubleWin = potentialWinners.length == 2 && potentialWinners[0].perfomancescore < 5 && potentialWinners[1].perfomancescore < 5;
+
+      if(potentialWinners.length > 0) {
+        assignPlacement(potentialWinners[0], isDoubleWin ? "DOUBLEWIN" : "WIN");
+      }
+      if(potentialWinners.length > 1) {
+        assignPlacement(potentialWinners[1], isDoubleWin ? "DOUBLEWIN" : "HIGH");
+      }
+
+      orderedTops.slice(isDoubleWin ? 2 : 1).forEach(queen => {
+        if(!predictedPlacements.has(queen)) {
+          assignPlacement(queen, "HIGH");
+        }
+      });
+    }
+
+    Tops.forEach(queen => {
+      if(!predictedPlacements.has(queen)) {
+        assignPlacement(queen, "HIGH");
+      }
+    });
+
+    if(!(CurrentSeason.premiereformat == "DOUBLEPREMIERE" && CurrentSeason.episodes.length <= 2)) {
+      let useThreeWay = Bottoms.length >= 3 && Bottoms[0] && Bottoms[1] && Bottoms[2] &&
+        Bottoms[0].perfomancescore > 40 && Bottoms[1].perfomancescore > 40 && Bottoms[2].perfomancescore > 40 &&
+        CurrentSeason.currentCast.length >= 6;
+
+      let lipSyncers = useThreeWay ? Bottoms.slice(0,3) : Bottoms.slice(0, Math.min(2, Bottoms.length));
+      lipSyncers.forEach(queen => assignPlacement(queen, "BOTTOM"));
+      Bottoms.slice(lipSyncers.length).forEach(queen => {
+        if(!predictedPlacements.has(queen)) {
+          assignPlacement(queen, "LOW");
+        }
+      });
+    }
+
+    CurrentSeason.currentCast.forEach(queen => {
+      if(!predictedPlacements.has(queen)) {
+        assignPlacement(queen, "SAFE");
+      }
+    });
+  };
+
+  calculateDefaultPlacements();
+
+  let getCurrentPlacement = (queen) => {
+    return predictedPlacements.get(queen) || "SAFE";
+  };
+
+  CurrentSeason.currentCast.forEach((queen, index) => {
+    let row = document.createElement("tr");
+    row.style.backgroundColor = index % 2 === 0 ? "#f9f9f9" : "white";
+
+    // Queen name cell with image
+    let nameCell = document.createElement("td");
+    nameCell.style.padding = "10px";
+    nameCell.style.border = "1px solid #ddd";
+    nameCell.style.textAlign = "center";
+    let queenImg = document.createElement("img");
+    queenImg.src = queen.image;
+    queenImg.style.width = "60px";
+    queenImg.style.height = "60px";
+    queenImg.style.borderRadius = "10px";
+    queenImg.style.display = "block";
+    queenImg.style.margin = "0 auto 5px";
+    nameCell.appendChild(queenImg);
+    let queenName = document.createElement("div");
+    queenName.innerHTML = queen.GetName();
+    queenName.style.fontWeight = "bold";
+    nameCell.appendChild(queenName);
+    row.appendChild(nameCell);
+
+    // Track record cell
+    let trCell = document.createElement("td");
+    trCell.style.padding = "10px";
+    trCell.style.border = "1px solid #ddd";
+    trCell.style.textAlign = "center";
+    let trDiv = document.createElement("div");
+    trDiv.style.display = "flex";
+    trDiv.style.justifyContent = "center";
+    trDiv.style.flexWrap = "wrap";
+    trDiv.style.gap = "3px";
+
+    queen.trackrecord.forEach(placement => {
+      let badge = document.createElement("span");
+      badge.innerHTML = placement;
+      badge.style.padding = "3px 6px";
+      badge.style.borderRadius = "3px";
+      badge.style.fontSize = "11px";
+      badge.style.fontWeight = "bold";
+      badge.style.color = "white";
+
+      // Color code based on placement
+      if (placement === "WIN" || placement === "DOUBLEWIN" || placement === "TOP2") {
+        badge.style.backgroundColor = "#1741ff";
+      } else if (placement === "HIGH") {
+        badge.style.backgroundColor = "#17d4ff";
+      } else if (placement === "SAFE") {
+        badge.style.backgroundColor = "#7971c7";
+      } else if (placement === "LOW") {
+        badge.style.backgroundColor = "#ff8a8a";
+      } else if (placement === "BOTTOM") {
+        badge.style.backgroundColor = "#fa2525";
+      }
+
+      trDiv.appendChild(badge);
+    });
+
+    // Add stats
+    let stats = document.createElement("div");
+    stats.innerHTML = `W:${queen.wins} H:${queen.highs} S:${queen.safes} L:${queen.lows} B:${queen.bottoms}`;
+    stats.style.fontSize = "10px";
+    stats.style.marginTop = "5px";
+    stats.style.color = "#666";
+    trDiv.appendChild(stats);
+
+    trCell.appendChild(trDiv);
+    row.appendChild(trCell);
+
+    // Current placement cell
+    let currentCell = document.createElement("td");
+    currentCell.style.padding = "10px";
+    currentCell.style.border = "1px solid #ddd";
+    currentCell.style.textAlign = "center";
+    let currentPlacement = getCurrentPlacement(queen);
+    let currentChip = buildPlacementChip(currentPlacement);
+    currentChip.style.opacity = "1";
+    currentChip.style.boxShadow = "0 0 0 2px rgba(0,0,0,0.2)";
+    currentChip.style.fontSize = "13px";
+    currentCell.appendChild(currentChip);
+    row.appendChild(currentCell);
+
+    // New placement dropdown cell
+    let newCell = document.createElement("td");
+    newCell.style.padding = "10px";
+    newCell.style.border = "1px solid #ddd";
+    newCell.style.textAlign = "center";
+    let select = document.createElement("select");
+    select.id = `placement_${index}`;
+    select.setAttribute("data-queen-index", index);
+    select.style.width = "0";
+    select.style.height = "0";
+    select.style.opacity = "0";
+    select.style.pointerEvents = "none";
+
+    let placements = ["WIN", "DOUBLEWIN", "TOP2", "HIGH", "SAFE", "LOW", "BOTTOM"];
+    let optionsWrapper = document.createElement("div");
+    optionsWrapper.style.display = "flex";
+    optionsWrapper.style.flexWrap = "wrap";
+    optionsWrapper.style.justifyContent = "center";
+    optionsWrapper.style.gap = "8px";
+    placements.forEach(p => {
+      let option = document.createElement("option");
+      option.value = p;
+      option.text = p;
+      if (p === currentPlacement) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+
+      let chip = buildPlacementChip(p, p === currentPlacement, true);
+      chip.dataset.placementValue = p;
+      chip.addEventListener("click", () => {
+        let siblings = optionsWrapper.querySelectorAll("span");
+        siblings.forEach(sib => {
+          sib.style.boxShadow = "0 0 0 1px rgba(0,0,0,0.1)";
+          sib.style.opacity = "0.8";
+        });
+        chip.style.boxShadow = "0 0 0 3px rgba(0,0,0,0.3)";
+        chip.style.opacity = "1";
+        select.value = p;
+      });
+      optionsWrapper.appendChild(chip);
+    });
+
+    newCell.appendChild(optionsWrapper);
+    newCell.appendChild(select);
+    row.appendChild(newCell);
+
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+  Main.MainScreen.appendChild(table);
+
+  Main.createLine();
+  Main.createButton("Skip Rigging", "WhoGetsCritiques()");
+  Main.createButton("Confirm Placements", "ApplyProducerChanges()");
+}
+
+function ApplyProducerChanges() {
+  // Clear existing arrays
+  Tops = [];
+  Bottoms = [];
+  TopsQueens = [];
+  BottomQueens = [];
+  Safes = [];
+  doublewin = false;
+
+  // Collect new placements from dropdowns
+  let newPlacements = {};
+  CurrentSeason.currentCast.forEach((queen, index) => {
+    let select = document.getElementById(`placement_${index}`);
+    if (select) {
+      newPlacements[queen.GetName()] = select.value;
+    }
+  });
+
+  // Reorganize queens based on new placements
+  CurrentSeason.currentCast.forEach(queen => {
+    let placement = newPlacements[queen.GetName()];
+
+    switch(placement) {
+      case "WIN":
+        Tops.push(queen);
+        TopsQueens.push(queen);
+        break;
+      case "DOUBLEWIN":
+        Tops.push(queen);
+        TopsQueens.push(queen);
+        doublewin = true;
+        break;
+      case "TOP2":
+        Tops.push(queen);
+        TopsQueens.push(queen);
+        break;
+      case "HIGH":
+        Tops.push(queen);
+        break;
+      case "SAFE":
+        Safes.push(queen);
+        break;
+      case "LOW":
+        Bottoms.push(queen);
+        break;
+      case "BOTTOM":
+        Bottoms.push(queen);
+        BottomQueens.push(queen);
+        break;
+    }
+  });
+
+  // Rebuild Critiqued array
+  Critiqued = [];
+  Tops.forEach(q => Critiqued.push(q));
+  Bottoms.forEach(q => Critiqued.push(q));
+
+  // Continue to normal flow
+  WhoGetsCritiques();
+}
+
 function WhoGetsCritiques()
 {
   let Main = new Screen();
@@ -10818,10 +11329,9 @@ function Placements() {
       Tops.sort((a, b) => a.perfomancescore - b.perfomancescore);
 
       // Top 2 will lip sync for the win (TOP2 placement)
-      if(TopsQueens.length==0)
+      if(TopsQueens.length < 2)
       {
-        TopsQueens.push(Tops[0]);
-        TopsQueens.push(Tops[1]);
+        TopsQueens = Tops.slice(0, 2);
       }
 
       organized = 1;
@@ -10832,54 +11342,111 @@ function Placements() {
 
     if(Tops.length!=0)
     {
+       // Always pick a new random top for display
+
+      randomtop = getRandomInt(0,Tops.length-1);
+
+ 
+
       if(Steps == 0)
+
       {
-        randomtop = getRandomInt(0,Tops.length-1);
+
         Main.createImage(Tops[randomtop].image,"#17d4ff");
+
         Main.createText(Tops[randomtop].GetName()+". "+CurrentChallenge.TopPlacement());
+
       }
+
       else
+
       {
+
         // Reveal TOP2 who will lip sync for the win
+
         if(TopsQueens.indexOf(Tops[randomtop]) != -1)
+
         {
+
           Main.createImage(Tops[randomtop].image,"#1741ff");
+
           Main.createText(Tops[randomtop].GetName()+", CONDRAGULATIONS! You are one of the top 2 queens this week.","Bold");
+
           Main.createText("You will lip sync for the WIN!","Bold");
+
           Tops[randomtop].trackrecord.push("TOP2");
+
           Tops[randomtop].ppe += 4;
+
           Tops[randomtop].favoritism += 2;
+
           Tops[randomtop].highs++;
+
           Tops.splice(randomtop,1);
+
         }
+
         else
+
         {
+
           // Other tops get HIGH
+
           Main.createImage(Tops[randomtop].image,"#17d4ff");
+
           Main.createText(Tops[randomtop].GetName()+", great job this week. You are safe.","");
+
           Tops[randomtop].trackrecord.push("HIGH");
+
           Tops[randomtop].ppe += 4;
+
           Tops[randomtop].favoritism += 1;
+
           Tops[randomtop].highs++;
+
           Tops.splice(randomtop,1);
+
         }
+
       }
+
     }
+
+ 
 
     Steps++;
+
     if(Steps==2)
+
       Steps = 0;
 
+ 
+
     if(Tops.length!=0)
+
     {
+
       Main.createButton("Proceed", "Placements()");
+
     }
+
     else
+
     {
+
+      // Ensure TopsQueens has exactly 2 queens before calling PremiereLipsync
+
+      if(TopsQueens.length < 2) {
+
+        console.error("Error: TopsQueens should have 2 queens but has " + TopsQueens.length);
+
+      }
+
+ 
+
       Main.createButton("Proceed", "PremiereLipsync()");
+
       Steps = 0;
-      TopsQueens = [];
-      BottomQueens = [];
       organized = 0;
     }
 
@@ -11441,6 +12008,136 @@ function Placements() {
 }
   
 
+function AutomaticElimination() {
+  // Skip user choice and continue with automatic elimination
+  Steps = 7; // Jump to step 7 which is the original elimination logic
+  Lipsync();
+}
+
+function ApplyEliminationChoice() {
+  // Get user choices
+  let doubleShantayElement = document.getElementById("doubleShantayCheck");
+  let doubleShantay = doubleShantayElement ? doubleShantayElement.checked : false;
+
+  // Calculate lipsync scores (needed for the system)
+  BottomQueens.forEach(queen => {
+    queen.GetLipsync();
+    queen.favoritism += -4;
+  });
+
+  // Get eliminated queens based on user choice
+  let eliminatedQueens = [];
+  let stayingQueens = [];
+
+  let choiceCards = document.querySelectorAll(".producer-save-card");
+
+  if (doubleShantay) {
+    stayingQueens = BottomQueens.slice();
+  } else if (choiceCards.length > 0) {
+    choiceCards.forEach(card => {
+      let queenIndex = parseInt(card.dataset.queenIndex);
+      if (isNaN(queenIndex) || queenIndex < 0 || queenIndex >= BottomQueens.length) {
+        return;
+      }
+      let queen = BottomQueens[queenIndex];
+      if (card.dataset.saved === "true") {
+        if (stayingQueens.indexOf(queen) === -1) {
+          stayingQueens.push(queen);
+        }
+      } else {
+        if (eliminatedQueens.indexOf(queen) === -1) {
+          eliminatedQueens.push(queen);
+        }
+      }
+    });
+
+    let anyTouched = Array.from(choiceCards).some(card => card.dataset.touched === "true");
+    if (stayingQueens.length === 0 && !anyTouched) {
+      stayingQueens = BottomQueens.slice();
+      eliminatedQueens = [];
+    }
+  } else {
+    stayingQueens = BottomQueens.slice();
+  }
+
+  // Display results
+  let Main = new Screen();
+  Main.clean();
+
+  if (doubleShantay) {
+    // Double Shantay - everyone stays
+    Main.createBigText("Shantay you BOTH stay!");
+    BottomQueens.forEach(queen => {
+      Main.createImage(queen.image, "#ff8a8a");
+      queen.trackrecord.push("BOTTOM");
+      queen.ppe += 1;
+    });
+    Main.createText("NOBODY is going home tonight!", 'Bold');
+    Main.createText("You have both made HERSTORY!", 'Bold');
+
+    let ls = new LipsyncSong(BottomQueens, songschosen, CurrentSeason.episodes.length, 'btm', []);
+    CurrentSeason.lipsyncs.push(ls);
+    CurrentSeason.doubleShantay = true;
+
+    Main.createButton("Proceed", "GetPromoTable()");
+  } else if (eliminatedQueens.length === 0) {
+    // User didn't select anyone - default to staying
+    Main.createBigText("Shantay you stay!");
+    BottomQueens.forEach(queen => {
+      Main.createImage(queen.image, "#ff8a8a");
+      queen.trackrecord.push("BOTTOM");
+      queen.ppe += 1;
+    });
+    Main.createText("You all get to stay!", 'Bold');
+
+    let ls = new LipsyncSong(BottomQueens, songschosen, CurrentSeason.episodes.length, 'btm', []);
+    CurrentSeason.lipsyncs.push(ls);
+
+    Main.createButton("Proceed", "GetPromoTable()");
+  } else {
+    // Show staying queens first
+    if (stayingQueens.length > 0) {
+      Main.createBigText("Shantay you stay!");
+      stayingQueens.forEach(queen => {
+        Main.createImage(queen.image, "#ff8a8a");
+        Main.createText(queen.GetName()+", shantay you stay.", 'Bold');
+        queen.trackrecord.push("BOTTOM");
+        queen.ppe += 1;
+      });
+    }
+
+    // Then show eliminated queens
+    Main.createBigText("Sashay away...");
+    eliminatedQueens.forEach(queen => {
+      Main.createImageBW(queen.image, "#fa2525");
+      Main.createText(queen.GetName()+", sashay away.", 'Bold');
+      queen.trackrecord.push("ELIMINATED");
+
+      if(CurrentSeason.eliminatedCast.length==0) {
+        queen.placement = CurrentSeason.fullCast.length-CurrentSeason.eliminatedCast.length;
+      } else {
+        queen.placement = CurrentSeason.fullCast.length-CurrentSeason.eliminatedCast.length;
+      }
+
+      CurrentSeason.currentCast.splice(CurrentSeason.currentCast.indexOf(queen),1);
+      CurrentSeason.eliminatedCast.unshift(queen);
+    });
+
+    let ls = new LipsyncSong(BottomQueens, songschosen, CurrentSeason.episodes.length, 'btm', eliminatedQueens);
+    CurrentSeason.lipsyncs.push(ls);
+
+    if (eliminatedQueens.length > 1) {
+      CurrentSeason.doubleSashay = true;
+    }
+
+    Main.createButton("Proceed", "GetPromoTable()");
+  }
+
+  Steps = 0;
+  TopsQueens = [];
+  BottomQueens = [];
+}
+
 function Lipsync() {
   Main = new Screen();
   Main.clean();
@@ -11601,6 +12298,150 @@ function Lipsync() {
         Main.createText("I have made my decisions.", 'Bold');
         break;
       case 6:
+        Main.createBigText("🎬 PRODUCERS: CHOOSE THE ELIMINATION 🎬");
+        Main.createRupaulAnnouncement("Tap the queens you want to save. Unselected queens will sashay away.");
+
+        let instructions = document.createElement("p");
+        instructions.innerHTML = "Click a queen to <strong>save her</strong>. Click again to undo.";
+        instructions.style.textAlign = "center";
+        instructions.style.fontSize = "16px";
+        instructions.style.fontWeight = "bold";
+        instructions.style.color = "#c228ff";
+        instructions.style.marginTop = "10px";
+        Main.MainScreen.appendChild(instructions);
+
+        let elimGrid = document.createElement("div");
+        elimGrid.style.display = "grid";
+        elimGrid.style.gridTemplateColumns = "repeat(auto-fit, minmax(220px, 1fr))";
+        elimGrid.style.gap = "20px";
+        elimGrid.style.margin = "25px auto";
+        elimGrid.style.width = "95%";
+
+        BottomQueens.forEach((queen, index) => {
+          let card = document.createElement("div");
+          card.classList.add("producer-save-card");
+          card.dataset.queenIndex = index;
+          card.dataset.saved = "false";
+          card.style.background = "white";
+          card.style.borderRadius = "14px";
+          card.style.border = "3px solid #fa2525";
+          card.style.boxShadow = "0 8px 18px rgba(0,0,0,0.12)";
+          card.style.padding = "18px";
+          card.style.textAlign = "center";
+          card.style.cursor = "pointer";
+          card.style.transition = "transform .2s ease, box-shadow .2s ease, border-color .2s ease";
+
+          let img = document.createElement("img");
+          img.src = queen.image;
+          img.style.width = "110px";
+          img.style.height = "110px";
+          img.style.borderRadius = "12px";
+          img.style.objectFit = "cover";
+          img.style.marginBottom = "12px";
+          card.appendChild(img);
+
+          let name = document.createElement("h3");
+          name.innerHTML = queen.GetName();
+          name.style.margin = "0";
+          name.style.fontSize = "18px";
+          name.style.color = "#2b134d";
+          card.appendChild(name);
+
+          let tagline = document.createElement("div");
+          tagline.innerHTML = "Click to save";
+          tagline.style.marginTop = "6px";
+          tagline.style.fontWeight = "bold";
+          tagline.style.fontSize = "13px";
+          tagline.style.color = "#fa2525";
+          card.appendChild(tagline);
+
+          let trDiv = document.createElement("div");
+          trDiv.style.display = "flex";
+          trDiv.style.flexWrap = "wrap";
+          trDiv.style.justifyContent = "center";
+          trDiv.style.gap = "4px";
+          trDiv.style.marginTop = "12px";
+
+          queen.trackrecord.forEach(placement => {
+            let badge = document.createElement("span");
+            badge.innerHTML = placement;
+            badge.style.padding = "4px 8px";
+            badge.style.borderRadius = "4px";
+            badge.style.fontSize = "11px";
+            badge.style.fontWeight = "bold";
+            badge.style.color = "white";
+
+            if (placement === "WIN" || placement === "DOUBLEWIN" || placement === "TOP2") {
+              badge.style.backgroundColor = "#1741ff";
+            } else if (placement === "HIGH") {
+              badge.style.backgroundColor = "#17d4ff";
+            } else if (placement === "SAFE") {
+              badge.style.backgroundColor = "#7971c7";
+            } else if (placement === "LOW") {
+              badge.style.backgroundColor = "#ff8a8a";
+            } else if (placement === "BOTTOM") {
+              badge.style.backgroundColor = "#fa2525";
+            }
+
+            trDiv.appendChild(badge);
+          });
+
+          card.appendChild(trDiv);
+
+          let stats = document.createElement("div");
+          stats.innerHTML = `Wins: ${queen.wins} • High: ${queen.highs} • Low: ${queen.lows} • Bottom: ${queen.bottoms}`;
+          stats.style.fontSize = "11px";
+          stats.style.marginTop = "8px";
+          stats.style.color = "#555";
+          card.appendChild(stats);
+
+          const toggleSelection = () => {
+            card.dataset.touched = "true";
+            let isSaved = card.dataset.saved === "true";
+            if (isSaved) {
+              card.dataset.saved = "false";
+              card.style.borderColor = "#fa2525";
+              card.style.boxShadow = "0 8px 18px rgba(0,0,0,0.12)";
+              card.style.transform = "scale(1)";
+              tagline.innerHTML = "Click to save";
+              tagline.style.color = "#fa2525";
+            } else {
+              card.dataset.saved = "true";
+              card.style.borderColor = "#17d4ff";
+              card.style.boxShadow = "0 12px 22px rgba(23,212,255,0.35)";
+              card.style.transform = "scale(1.04)";
+              tagline.innerHTML = "Saved!";
+              tagline.style.color = "#17d4ff";
+            }
+          };
+
+          card.addEventListener("click", toggleSelection);
+
+          elimGrid.appendChild(card);
+        });
+
+        Main.MainScreen.appendChild(elimGrid);
+
+        let doubleShantayDiv = document.createElement("div");
+        doubleShantayDiv.style.textAlign = "center";
+        doubleShantayDiv.style.margin = "20px";
+        let dsCheckbox = document.createElement("input");
+        dsCheckbox.type = "checkbox";
+        dsCheckbox.id = "doubleShantayCheck";
+        let dsLabel = document.createElement("label");
+        dsLabel.htmlFor = "doubleShantayCheck";
+        dsLabel.innerHTML = " DOUBLE SHANTAY - Nobody goes home!";
+        dsLabel.style.marginLeft = "10px";
+        dsLabel.style.fontSize = "16px";
+        dsLabel.style.fontWeight = "bold";
+        dsLabel.style.color = "#c228ff";
+        doubleShantayDiv.appendChild(dsCheckbox);
+        doubleShantayDiv.appendChild(dsLabel);
+        Main.MainScreen.appendChild(doubleShantayDiv);
+
+        Main.createButton("Confirm Elimination", "ApplyEliminationChoice()");
+        break;
+      case 7:
         Main.createBigText("Shantay you stay...");
         for(let i = 0; i < BottomQueens.length; i++)
         {
@@ -11839,7 +12680,15 @@ function Lipsync() {
         }
         break;
         }
-    Steps++;
+    let waitingForProducerChoice = (Steps == 6);
+    if(!waitingForProducerChoice)
+    {
+      Steps++;
+    }
+    if(waitingForProducerChoice)
+    {
+      return;
+    }
     if(Steps<8)
       Main.createButton("Proceed", "Lipsync()");
     else
@@ -12236,7 +13085,9 @@ function PremiereLipsync() {
 
   Steps++;
   if(Steps<7)
+  {
     Main.createButton("Proceed", "PremiereLipsync()");
+  }
   else
   {
     // After episode 2, combine groups for episode 3
@@ -12255,6 +13106,8 @@ function PremiereLipsync() {
 
     Main.createButton("Proceed", "GetPromoTable()");
     Steps = 0;
+
+    // Reset after PremiereLipsync is done
     TopsQueens = [];
     BottomQueens = [];
     organized = 0;
@@ -12386,7 +13239,7 @@ function GenerateChallenge()
     if((CurrentChallenge.type=="BALL" && Steps==3) ||CurrentChallenge.type!="BALL")
     {
       RankQueens();
-      Main.createButton("Proceed", "WhoGetsCritiques()");
+      Main.createButton("Proceed", "ProducersRoom()");
       Steps = 0;
     }
     else
@@ -12793,11 +13646,22 @@ function GenerateRusicalRoles(){
 let selectedChallengeType = null;
 
 function ChallengeSelector(){
-  Main = new Screen();
-  Main.clean();
-  Main.createBigText("Select This Week's Challenge");
-  Main.createRupaulAnnouncement("Queens, it's time to choose your destiny!");
-  Main.createRupaulAnnouncement("Select the challenge type for this week:");
+  switch(localStorage.getItem("theme"))
+  {
+    case "Simple.css":
+      document.body.style.backgroundColor = '#1a1a1a';
+      break;
+
+    default:
+      document.body.style.backgroundImage = 'url("Images/Backgrounds/RChallenge.png")';
+      break;
+  }
+
+  Announcement = new Screen();
+  Announcement.clean();
+  Announcement.createBigText("Select This Week's Challenge");
+  Announcement.createRupaulAnnouncement("Queens, it's time to choose your destiny!");
+  Announcement.createRupaulAnnouncement("Select the challenge type for this week:");
 
   // Create a select dropdown for challenge types
   let selectContainer = document.createElement("div");
@@ -12833,9 +13697,9 @@ function ChallengeSelector(){
   });
 
   selectContainer.appendChild(select);
-  document.getElementById("first").appendChild(selectContainer);
+  Announcement.MainScreen.appendChild(selectContainer);
 
-  Main.createButton("Proceed", "ConfirmChallengeSelection()");
+  Announcement.createButton("Proceed", "ConfirmChallengeSelection()");
 }
 
 function ConfirmChallengeSelection(){
@@ -13268,12 +14132,13 @@ function RankQueens(){
       case "LIFE":
       if(CurrentSeason.currentCast.length>=14)
       {
-        for(let i = 0; i<getRandomInt(3,5); i++)
+        // Fixed placement distribution: 3 tops (1 WIN + 2 HIGH), 3 bottoms (1 LOW + 2 BTM2), rest SAFE
+        for(let i = 0; i<3; i++)
           {
             Tops.push(CurrentSeason.currentCast[i]);
           }
 
-          for(let i = 0; i<getRandomInt(3,5); i++)
+          for(let i = 0; i<3; i++)
           {
             Bottoms.push(CurrentSeason.currentCast[CurrentSeason.currentCast.length-1-i]);
           }
@@ -13359,12 +14224,13 @@ function RankQueens(){
         }
         else
         {
-          for(let i = 0; i<getRandomInt(3,4); i++)
+          // Fixed placement distribution: 3 tops (1 WIN + 2 HIGH), 3 bottoms (1 LOW + 2 BTM2), rest SAFE
+          for(let i = 0; i<3; i++)
           {
             Tops.push(CurrentSeason.currentCast[i]);
           }
 
-          for(let i = 0; i<getRandomInt(3,4); i++)
+          for(let i = 0; i<3; i++)
           {
               Bottoms.push(CurrentSeason.currentCast[CurrentSeason.currentCast.length-1-i]);
           }
@@ -13588,7 +14454,7 @@ function TrackRecords()
 
   else if(done==false)
   {
-    MainScreen.createButton("Proceed","ChallengeAnnouncement()");
+    MainScreen.createButton("Proceed","ChallengeSelector()");
   }
 
   MainScreen.createButton("Download", "convertToImage()");
@@ -13628,7 +14494,7 @@ function Songs()
 
   else if(done==false)
   {
-    MainScreen.createButton("Proceed","ChallengeAnnouncement()");
+    MainScreen.createButton("Proceed","ChallengeSelector()");
   }
 
   MainScreen.createButton("Download", "convertToImage2()");
@@ -13668,7 +14534,7 @@ function SStorylines()
 
   else if(done==false)
   {
-    MainScreen.createButton("Proceed","ChallengeAnnouncement()");
+    MainScreen.createButton("Proceed","ChallengeSelector()");
   }
 
   MainScreen.createButton("Download", "convertToImage3()");
@@ -15527,3 +16393,4 @@ document.addEventListener('keydown', function(event) {
   }
 });
 //#endregion
+
